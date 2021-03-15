@@ -59,7 +59,8 @@ Function New-FolderToCreate {
             Catch {
                 Write-Warning "Couldn't create ""$($FolderToCreate)"" folder"
             }
-        } else {
+        }
+        else {
             Write-Output "Folder ""$($FolderToCreate)"" already exsts. Skipping.."
         }
     }
@@ -69,6 +70,9 @@ Function Get-DeploymentTypeInfo {
     <#
     Function to get deployment type(s) for applcation(s) passed
     #>
+    Param (
+        [String[]]$ApplicationName
+    )
 
     #Create Array to display Application and Deployment Type Information
     $DeploymentTypes = @()
@@ -99,9 +103,17 @@ Function Get-DeploymentTypeInfo {
                 $DeploymentObject | Add-Member NoteProperty -Name Application_Publisher -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Publisher
                 $DeploymentObject | Add-Member NoteProperty -Name Application_Version -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Version
                 $DeploymentObject | Add-Member NoteProperty -Name Application_IconId -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
+
+                #If we have the logo, add the path
+                If (Test-Path -Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
+                    $DeploymentObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg")
+                }
+
                 $DeploymentObject | Add-Member NoteProperty -Name Application_InfoUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.InfoUrl
                 $DeploymentObject | Add-Member NoteProperty -Name Application_PrivacyUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.PrivacyUrl
                 $DeploymentObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
+
+                
 
                 #DeploymentType Details
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Name -Value $Object.Title.InnerText
@@ -125,8 +137,8 @@ Function Get-DeploymentTypeInfo {
         }
     }
     #Output Details
-    $DeploymentTypes
-    $DeploymentTypes | Export-Csv (Join-Path -Path $WorkingFolder_DeploymentTypeDetail -ChildPath "DeploymentTypeDetail.csv") 
+    #Return $DeploymentTypes
+    $DeploymentTypes | Export-Csv (Join-Path -Path $WorkingFolder_DeploymentTypeDetail -ChildPath "DeploymentTypeDetail.csv") -Force
 }
 
 Function Export-Logo {
@@ -232,7 +244,13 @@ else {
 
 #Get list of Applications
 $ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object
+If ($ApplicationName) {
+    Write-Output "Found the following matches for ""$($AppName)"""
+    ForEach ($Application in $ApplicationName) {
+        Write-Output """$($Application)"""
+    }
+}
 
 #Call function to grab deployment type detail for application
-Get-DeploymentTypeInfo $ApplicationName
+Get-DeploymentTypeInfo -ApplicationName $ApplicationName
 
