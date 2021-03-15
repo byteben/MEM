@@ -105,40 +105,43 @@ Function Get-DeploymentTypeInfo {
                 $DeploymentObject | Add-Member NoteProperty -Name Application_IconId -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
 
                 #If we have the logo, add the path
-                If (Test-Path -Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
-                    $DeploymentObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg")
+                If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
+                    $DeploymentObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg")
                 }
-
-                $DeploymentObject | Add-Member NoteProperty -Name Application_InfoUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.InfoUrl
-                $DeploymentObject | Add-Member NoteProperty -Name Application_PrivacyUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.PrivacyUrl
-                $DeploymentObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
-
-                
-
-                #DeploymentType Details
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Name -Value $Object.Title.InnerText
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Technology -Value $Object.Installer.Technology
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecutionContext -Value $Object.Installer.ExecutionContext
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallContent -Value $Object.Installer.CustomData.InstallContent.ContentId
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallCommandLine -Value $Object.Installer.CustomData.InstallCommandLine
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UnInstallSetting -Value $Object.Installer.CustomData.UnInstallSetting
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallContent -Value $Object.Installer.CustomData.UninstallContent.ContentId
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallCommandLine -Value $Object.Installer.CustomData.UninstallCommandLine
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecuteTime -Value $Object.Installer.CustomData.ExecuteTime
-                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_MaxExecuteTime -Value $Object.Installer.CustomData.MaxExecuteTime
-
-                $DeploymentTypes += $DeploymentObject
+                else {
+                    $DeploymentObject | Add-Member NoteProperty -Name Application_IconPath -Value $Null
+                }
             }
-        }
-        #Call function to export logo for application
-        If ($ExportLogo) {
-            $IconId = $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
-            Export-Logo -IconId $IconId -AppName $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title
+
+            $DeploymentObject | Add-Member NoteProperty -Name Application_InfoUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.InfoUrl
+            $DeploymentObject | Add-Member NoteProperty -Name Application_PrivacyUrl -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.PrivacyUrl
+            $DeploymentObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
+
+            #DeploymentType Details
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Name -Value $Object.Title.InnerText
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Technology -Value $Object.Installer.Technology
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecutionContext -Value $Object.Installer.ExecutionContext
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallContent -Value $Object.Installer.CustomData.InstallContent.ContentId
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallCommandLine -Value $Object.Installer.CustomData.InstallCommandLine
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UnInstallSetting -Value $Object.Installer.CustomData.UnInstallSetting
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallContent -Value $Object.Installer.CustomData.UninstallContent.ContentId
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallCommandLine -Value $Object.Installer.CustomData.UninstallCommandLine
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecuteTime -Value $Object.Installer.CustomData.ExecuteTime
+            $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_MaxExecuteTime -Value $Object.Installer.CustomData.MaxExecuteTime
+
+            $DeploymentTypes += $DeploymentObject
         }
     }
-    #Output Details
-    #Return $DeploymentTypes
-    $DeploymentTypes | Export-Csv (Join-Path -Path $WorkingFolder_DeploymentTypeDetail -ChildPath "DeploymentTypeDetail.csv") -Force
+    #Call function to export logo for application
+    If ($ExportLogo) {
+        $IconId = $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
+        Export-Logo -IconId $IconId -AppName $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title
+    }
+}
+#Output Details
+Return $DeploymentTypes
+#Return $DeploymentTypes
+$DeploymentTypes | Export-Csv (Join-Path -Path $WorkingFolder_DeploymentTypeDetail -ChildPath "DeploymentTypeDetail.csv") -Force
 }
 
 Function Export-Logo {
