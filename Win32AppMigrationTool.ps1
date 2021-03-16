@@ -16,17 +16,27 @@ Function Connect-SiteServer {
         [String]$ProviderMachineName
     )
     # Import the ConfigurationManager.psd1 module 
-    if ($Null -eq (Get-Module ConfigurationManager)) {
-        Import-Module "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
+    Try {
+        If ($Null -eq (Get-Module ConfigurationManager)) {
+            Import-Module "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
+        }
+    }
+    Catch {
+        Write-Host 'Warning: Could not import the ConfigurationManager.psd1 Module' -ForegroundColor Red
     }
 
     # Connect to the site's drive if it is not already present
+    Try {
     if ($Null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
         New-PSDrive -Name $SiteCode -PSProvider CMSite -Root $ProviderMachineName
     }
-
-    #Set the current location to be the site code.
-    Set-Location "$($SiteCode):\"
+        #Set the current location to be the site code.
+        Set-Location "$($SiteCode):\"
+        Write-Host "Connected to provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Green
+    } Catch {
+        Write-Host "Warning: Could not connect to the specified provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Red
+    }
+    
 }
 
 #Create Global Variables
@@ -159,27 +169,6 @@ Function Get-FileFromInternet {
         $_
     }
 }
-#Connect to Site Server
-Connect-SiteServer -SiteCode  $SiteCode -ProviderMachineName $ProviderMachineName
-
-#Create Folders
-Write-Output "Setting up Environment for Win32App Migration Tool"
-Write-Output "Creating Folders..."
-New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "ContentPrepTool", "Logs", "Details", "Win32Apps")
-
-#Download Win32 Content Prep Tool
-Write-Output "Downloadling Win32 Content Prep Tool..."
-If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
-    Write-Output "IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download"
-}
-else {
-    Write-Output "Downloading Win32 Content Prep Tool..."
-    Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
-}
-
-#Get list of Applications
-$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object
-
 Function Get-AppInfo {
     <#
     Function to get deployment type(s) for applcation(s) passed
@@ -208,23 +197,23 @@ Function Get-AppInfo {
 
             $ApplicationObject = New-Object PSCustomObject
                 
-                #Application Details
-                $ApplicationObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
-                $ApplicationObject | Add-Member NoteProperty -Name Application_Name -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title
-                $ApplicationObject | Add-Member NoteProperty -Name Application_Description -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Description
-                $ApplicationObject | Add-Member NoteProperty -Name Application_Publisher -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Publisher
-                $ApplicationObject | Add-Member NoteProperty -Name Application_Version -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Version
-                $ApplicationObject | Add-Member NoteProperty -Name Application_IconId -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
-                $ApplicationObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
+            #Application Details
+            $ApplicationObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
+            $ApplicationObject | Add-Member NoteProperty -Name Application_Name -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title
+            $ApplicationObject | Add-Member NoteProperty -Name Application_Description -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Description
+            $ApplicationObject | Add-Member NoteProperty -Name Application_Publisher -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Publisher
+            $ApplicationObject | Add-Member NoteProperty -Name Application_Version -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Version
+            $ApplicationObject | Add-Member NoteProperty -Name Application_IconId -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
+            $ApplicationObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
                 
-                #If we have the logo, add the path
-                If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
-                    $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
-                }
-                else {
-                    $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value $Null
-                }
-                $ApplicationTypes += $ApplicationObject
+            #If we have the logo, add the path
+            If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
+                $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
+            }
+            else {
+                $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value $Null
+            }
+            $ApplicationTypes += $ApplicationObject
         
             #If Deployment Types exist, iterate through each DeploymentType and build deployment detail
             ForEach ($Object in $XMLContent.AppMgmtDigest.DeploymentType) {
@@ -251,11 +240,54 @@ Function Get-AppInfo {
     } 
     Return $DeploymentTypes, $ApplicationTypes
 }
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host 'Script Start Win32AppMigrationTool' -ForegroundColor DarkGray
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host ''
+
+#Connect to Site Server
+Write-Host 'Connecting to Site Server..' -ForegroundColor Cyan
+Connect-SiteServer -SiteCode  $SiteCode -ProviderMachineName $ProviderMachineName
+
+Write-Host ''
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host 'Checking Win32AppMigrationTool Folder Structure...' -ForegroundColor DarkGray
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host ''
+
+#Create Folders
+Write-Host "Creating Folders..."-ForegroundColor Cyan
+New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "ContentPrepTool", "Logs", "Details", "Win32Apps")
+
+Write-Host ''
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host 'Checking Win32AppMigrationTool Content Tool...' -ForegroundColor DarkGray
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host ''
+
+#Download Win32 Content Prep Tool
+Write-Host "Downloadling Win32 Content Prep Tool..." -ForegroundColor Cyan
+If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
+    Write-Output "IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download"
+}
+else {
+    Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
+    Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+}
+
+Write-Host ''
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host 'Checking Applications...' -ForegroundColor DarkGray
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host ''
+
+#Get list of Applications
+$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object
 
 If ($ApplicationName) {
-    Write-Output "Found the following matches for ""$($AppName)"""
+    Write-Host "The Win32App Migration Tool Found the following matches for ""$($AppName)"""
     ForEach ($Application in $ApplicationName) {
-        Write-Output """$($Application)"""
+        Write-Host """$($Application)""" -ForegroundColor Green
     }
 }
 
