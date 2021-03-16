@@ -341,7 +341,7 @@ If ($PackageApps) {
 
         #Create Application Parent Folders
         Write-Host "Application: ""$($Application.Application_Name)"""
-        Write-Host "Creating Application Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)""..." -ForegroundColor Cyan
+        Write-Host "Creating Application Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)""" -ForegroundColor Cyan
         If (!(Test-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $Application.Application_LogicalName ))) {
             New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders $Application.Application_LogicalName
         }
@@ -357,9 +357,9 @@ If ($PackageApps) {
     ForEach ($DeploymentType in $DeploymentTypes_Array) {
 
         #Create DeploymentType Child Folders
-        Write-Host "Creating DeploymentType Folder ""$($DeploymentType.DeploymentType_LogicalName)"" for DeploymentType ""$($DeploymentType.DeploymentType_Name)""..." -ForegroundColor Cyan
+        Write-Host "Creating DeploymentType Folder ""$($DeploymentType.DeploymentType_LogicalName)"" for DeploymentType ""$($DeploymentType.DeploymentType_Name)""" -ForegroundColor Cyan
         If (!(Test-Path -Path (Join-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $DeploymentType.Application_LogicalName ) -ChildPath $DeploymentType.DeploymentType_LogicalName))) {
-            New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders (Join-Path -Path $DeploymentType.DeploymentType_LogicalName -ChildPath $DeploymentType.DeploymentType_LogicalName)
+            New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders (Join-Path -Path $DeploymentType.Application_LogicalName -ChildPath $DeploymentType.DeploymentType_LogicalName)
         }
         else {
             Write-Host "Information: Folder ""$($WorkingFolder_Win32Apps)\$($DeploymentType.DeploymentType_LogicalName)\$($DeploymentType.DeploymentType_LogicalName)"" already exists" -ForegroundColor Magenta
