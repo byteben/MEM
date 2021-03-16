@@ -27,13 +27,14 @@ Function Connect-SiteServer {
 
     # Connect to the site's drive if it is not already present
     Try {
-    if ($Null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
-        New-PSDrive -Name $SiteCode -PSProvider CMSite -Root $ProviderMachineName
-    }
+        if ($Null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
+            New-PSDrive -Name $SiteCode -PSProvider CMSite -Root $ProviderMachineName
+        }
         #Set the current location to be the site code.
         Set-Location "$($SiteCode):\"
         Write-Host "Connected to provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Green
-    } Catch {
+    }
+    Catch {
         Write-Host "Warning: Could not connect to the specified provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Red
     }
     
@@ -55,27 +56,27 @@ Function New-FolderToCreate {
         [String[]]$Folders
     )
     If (!($Root)) {
-        Write-Warning "No Root Folder passed to Function"
+        Write-Host "Error: No Root Folder passed to Function" -ForegroundColor Red
     }
     If (!($Folders)) {
-        Write-Warning "No Folder(s) passed to Function"
+        Write-Host "Error: No Folder(s) passed to Function" -ForegroundColor Red
     }
 
     ForEach ($Folder in $Folders) {
         #Create Folders
         $FolderToCreate = Join-Path -Path $Root -ChildPath $Folder
         If (!(Test-Path $FolderToCreate)) {
-            Write-Output "Creating Folder ""$($FolderToCreate)"""
+            Write-Host "Creating Folder ""$($FolderToCreate)""..." -ForegroundColor Cyan
             Try {
                 New-Item -Path $FolderToCreate -ItemType Directory -Force -ErrorAction Stop | Out-Null
-                Write-Output "Folder ""$($FolderToCreate)"" created succesfully"
+                Write-Host "Folder ""$($FolderToCreate)"" created succesfully"
             }
             Catch {
-                Write-Warning "Couldn't create ""$($FolderToCreate)"" folder"
+                Write-Host "Warning: Couldn't create ""$($FolderToCreate)"" folder" -ForegroundColor Red
             }
         }
         else {
-            Write-Output "Folder ""$($FolderToCreate)"" already exsts. Skipping.."
+            Write-Host "Information: Folder ""$($FolderToCreate)"" already exsts. Skipping folder creation" -ForegroundColor Magenta
         }
     }
 }  
@@ -208,10 +209,10 @@ Function Get-AppInfo {
                 
             #If we have the logo, add the path
             If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
-                $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
+                $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
             }
             else {
-                $ApplicationTypes | Add-Member NoteProperty -Name Application_IconPath -Value $Null
+                $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value $Null
             }
             $ApplicationTypes += $ApplicationObject
         
@@ -223,6 +224,7 @@ Function Get-AppInfo {
                 
                 #DeploymentType Details
                 $DeploymentObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
+                $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_LogicalName -Value $Object.LogicalName
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Name -Value $Object.Title.InnerText
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Technology -Value $Object.Installer.Technology
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecutionContext -Value $Object.Installer.ExecutionContext
@@ -297,8 +299,18 @@ $DeploymentTypes_Array = $App_Array[0]
 $Applications_Array = $App_Array[1]
 
 #Export $DeploymentTypes to CSV for reference
-$DeploymentTypes_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "DeploymentTypes.csv") -NoTypeInformation -Force
-$Applications_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Applications.csv") -NoTypeInformation -Force
+Try {
+    $DeploymentTypes_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "DeploymentTypes.csv") -NoTypeInformation -Force
+}
+Catch {
+    Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
+}
+Try {
+    $Applications_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Applications.csv") -NoTypeInformation -Force
+}
+Catch {
+    Write-Host "Error: Could not Export Applications.csv. Do you have it open?" -ForegroundColor Red
+}
 
 #Call function to export logo for application
 Write-Host ''
@@ -322,16 +334,36 @@ If ($PackageApps) {
     Write-Host 'Building Intune.win Files...' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host ''
+    Write-Host 'Creating Application Folder(s)' -ForegroundColor DarkGray
+    Write-Host ''
 
     ForEach ($Application in $Applications_Array) {
 
-        #Create Folders
-        Write-Host "Creating Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)""..." -ForegroundColor Cyan
+        #Create Application Parent Folders
+        Write-Host "Application: ""$($Application.Application_Name)"""
+        Write-Host "Creating Application Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)""..." -ForegroundColor Cyan
         If (!(Test-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $Application.Application_LogicalName ))) {
             New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders $Application.Application_LogicalName
         }
         else {
-            Write-Host "Information: Folder ""$($Application.Application_LogicalName)"" already exists" -ForegroundColor Magenta
+            Write-Host "Information: Application Folder ""$($Application.Application_LogicalName)"" already exists" -ForegroundColor Magenta
         }
+        Write-Host ''
+    }
+
+    Write-Host ''
+    Write-Host 'Creating DeploymentType Folder(s)' -ForegroundColor DarkGray
+    Write-Host ''
+    ForEach ($DeploymentType in $DeploymentTypes_Array) {
+
+        #Create DeploymentType Child Folders
+        Write-Host "Creating DeploymentType Folder ""$($DeploymentType.DeploymentType_LogicalName)"" for DeploymentType ""$($DeploymentType.DeploymentType_Name)""..." -ForegroundColor Cyan
+        If (!(Test-Path -Path (Join-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $DeploymentType.Application_LogicalName ) -ChildPath $DeploymentType.DeploymentType_LogicalName))) {
+            New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders (Join-Path -Path $DeploymentType.DeploymentType_LogicalName -ChildPath $DeploymentType.DeploymentType_LogicalName)
+        }
+        else {
+            Write-Host "Information: Folder ""$($WorkingFolder_Win32Apps)\$($DeploymentType.DeploymentType_LogicalName)\$($DeploymentType.DeploymentType_LogicalName)"" already exists" -ForegroundColor Magenta
+        }
+        Write-Host ''
     }
 }
