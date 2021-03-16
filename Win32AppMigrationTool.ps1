@@ -63,11 +63,44 @@ Param (
     [Switch]$CreateApps
 )
 
+#Create Global Variables
+$Global:WorkingFolder_SiteCode = $SiteCode
+$Global:WorkingFolder_Root = $WorkingFolder
+$Global:WorkingFolder_Logos = Join-Path -Path $WorkingFolder_Root -ChildPath "Logos"
+$Global:WorkingFolder_Content = Join-Path -Path $WorkingFolder_Root -ChildPath "Content"
+$Global:WorkingFolder_ContentPrepTool = Join-Path -Path $WorkingFolder_Root -ChildPath "ContentPrepTool"
+$Global:WorkingFolder_Logs = Join-Path -Path $WorkingFolder_Root -ChildPath "Logs"
+$Global:WorkingFolder_Detail = Join-Path -Path $WorkingFolder_Root -ChildPath "Details"
+$Global:WorkingFolder_Win32Apps = Join-Path -Path $WorkingFolder_Root -ChildPath "Win32Apps"
+
+Function Get-ContentFiles {
+    Param (
+        [String]$Source,
+        [String]$Destination
+    )
+    <#
+    Function to download Deployment Type Content from Content Source Folder
+    #>
+Import-Module BitsTransfer
+
+    Try {
+        Robocopy.exe $Source $Destination /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
+    }
+
+    Catch {
+        Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$(SDestination)"""
+    }
+
+}
+
 Function Connect-SiteServer {
     Param (
         [String]$SiteCode,
         [String]$ProviderMachineName
     )
+    <#
+    Function to connect to ConfigMgr
+    #>
 
     # Import the ConfigurationManager.psd1 module 
     Try {
@@ -94,13 +127,6 @@ Function Connect-SiteServer {
     
 }
 
-#Create Global Variables
-$Global:WorkingFolder_Root = $WorkingFolder
-$Global:WorkingFolder_Logos = Join-Path -Path $WorkingFolder_Root -ChildPath "Logos"
-$Global:WorkingFolder_ContentPrepTool = Join-Path -Path $WorkingFolder_Root -ChildPath "ContentPrepTool"
-$Global:WorkingFolder_Logs = Join-Path -Path $WorkingFolder_Root -ChildPath "Logs"
-$Global:WorkingFolder_Detail = Join-Path -Path $WorkingFolder_Root -ChildPath "Details"
-$Global:WorkingFolder_Win32Apps = Join-Path -Path $WorkingFolder_Root -ChildPath "Win32Apps"
 Function New-FolderToCreate {
     <#
     Function to create folder structure for Win32AppMigrationTool
@@ -235,6 +261,7 @@ Function Get-AppInfo {
     #Create Array to display Application and Deployment Type Information
     $DeploymentTypes = @()
     $ApplicationTypes = @()
+    $Content = @()
 
     #Iterate through each Application and get details
     ForEach ($Application in $ApplicationName) {
@@ -273,8 +300,9 @@ Function Get-AppInfo {
             #If Deployment Types exist, iterate through each DeploymentType and build deployment detail
             ForEach ($Object in $XMLContent.AppMgmtDigest.DeploymentType) {
 
-                #Create new custom PSObject to build line detail
-                $DeploymentObject = New-Object PSCustomObject
+                #Create new custom PSObjects to build line detail
+                $DeploymentObject = New-Object -TypeName PSCustomObject
+                $ContentObject = New-Object -TypeName PSCustomObject
                 
                 #DeploymentType Details
                 $DeploymentObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
@@ -291,10 +319,16 @@ Function Get-AppInfo {
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_MaxExecuteTime -Value $Object.Installer.CustomData.MaxExecuteTime
 
                 $DeploymentTypes += $DeploymentObject
+
+                #Content Details
+                $ContentObject | Add-Member NoteProperty -Name Content_DeploymentType_LogicalName -Value $Object.LogicalName
+                $ContentObject | Add-Member NoteProperty -Name Content_Location -Value $Object.Installer.Contents.Content.Location
+
+                $Content += $ContentObject                
             }
         }
     } 
-    Return $DeploymentTypes, $ApplicationTypes
+    Return $DeploymentTypes, $ApplicationTypes, $Content
 }
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host 'Script Start Win32AppMigrationTool' -ForegroundColor DarkGray
@@ -313,7 +347,7 @@ Write-Host ''
 
 #Create Folders
 Write-Host "Creating Folders..."-ForegroundColor Cyan
-New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "ContentPrepTool", "Logs", "Details", "Win32Apps")
+New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "Content", "ContentPrepTool", "Logs", "Details", "Win32Apps")
 
 Write-Host ''
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
@@ -351,6 +385,7 @@ If ($ApplicationName) {
 $App_Array = Get-AppInfo -ApplicationName $ApplicationName
 $DeploymentTypes_Array = $App_Array[0]
 $Applications_Array = $App_Array[1]
+$Content_Array = $App_Array[2]
 
 #Export $DeploymentTypes to CSV for reference
 Try {
@@ -364,6 +399,12 @@ Try {
 }
 Catch {
     Write-Host "Error: Could not Export Applications.csv. Do you have it open?" -ForegroundColor Red
+}
+Try {
+    $Content_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Content.csv") -NoTypeInformation -Force
+}
+Catch {
+    Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
 }
 
 #Call function to export logo for application
@@ -430,16 +471,28 @@ If ($PackageApps) {
 
         #Create DeploymentType Content Folder(s)
         Write-Host "Creating DeploymentType Content Folder for DeploymentType ""$($DeploymentType.DeploymentType_Name)""" -ForegroundColor Cyan
-        If (!(Test-Path -Path (Join-Path -Path (Join-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $DeploymentType.Application_LogicalName ) -ChildPath $DeploymentType.DeploymentType_LogicalName) -ChildPath "Content"))) {
-            New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders (Join-Path -Path (Join-Path -Path $DeploymentType.Application_LogicalName -ChildPath $DeploymentType.DeploymentType_LogicalName) -ChildPath "Content")
+        If (!(Test-Path -Path (Join-Path -Path $WorkingFolder_Content -ChildPath $DeploymentType.Application_LogicalName))) {
+            New-FolderToCreate -Root $WorkingFolder_Content -Folders $DeploymentType.DeploymentType_LogicalName
         }
         else {
-            Write-Host "Information: Folder ""$($WorkingFolder_Win32Apps)\$($DeploymentType.DeploymentType_LogicalName)\$($DeploymentType.DeploymentType_LogicalName)""\Content already exists" -ForegroundColor Magenta
+            Write-Host "Information: Folder ""$($WorkingFolder_Content)\$($DeploymentType.DeploymentType_LogicalName)"" Content already exists" -ForegroundColor Magenta
         }
         Write-Host ''
     }
 
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host 'Building Intune.win Files...' -ForegroundColor DarkGray
+    Write-Host 'Downloading Content' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+
+    #Change location
+    Set-Location $ENV:SystemDrive
+
+    ForEach ($Content in $Content_Array) {
+        Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
+        #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
+        Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
+    }
+
+    #Set the current location to be the site code.
+    Set-Location "$($SiteCode):\"
 }
