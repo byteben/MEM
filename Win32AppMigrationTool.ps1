@@ -496,22 +496,28 @@ If ($PackageApps) {
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating .IntuneWin File(s)' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host ''
 
     #Get Application and Deployment Type Details and Files
     ForEach ($Application in $Applications_Array) {
 
+        Write-Host ''
         Write-Host "Creating .Intunewin for:-" -ForegroundColor Cyan
-        Write-Host "Application: ""$($Application.Application_Name)"""
+        Write-Host """$($Application.Application_Name)""" -ForegroundColor Green
+        Write-Host "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:"
+        Write-Host ''
+        
+        ForEach ($Deployment in $DeploymentTypes_Array | Where-Object { $_.Application_LogicalName -eq $Application.Application_LogicalName }) {
 
-        ForEach ($Deployment in $DeploymentTypes_Array | Where-Object {$_.Application_LogicalName -eq $Application.Application_LogicalName}){
+            Write-Host "DeploymentType Name: ""$($Deployment.DeploymentType_Name)"""
 
-            Write-Host "DeploymentType: ""$($Deployment.DeploymentType_Name)"""
+            ForEach ($Content in $Content_Array | Where-Object { $_.Content_DeploymentType_LogicalName -eq $Deployment.DeploymentType_LogicalName }) {
 
+                Write-Host "Content Folder: ""$($WorkingFolder_Content)\$($Application.Application_LogicalName)\$($Deployment.DeploymentType_LogicalName)"""
+                Write-Host "Intunewin Output Folder: ""$($WorkingFolder_Win32Apps)\$($Application.Application_LogicalName)\$($Deployment.DeploymentType_LogicalName)"""
+                Write-Host ''
+            }
         }
-
     }
-    
 }
 
 #If the $CreateApps parameter was passed. Use the Win32Content Prep Tool to create Win32 Apps
