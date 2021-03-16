@@ -407,14 +407,15 @@ Catch {
     Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
 }
 
-#Call function to export logo for application
-Write-Host ''
-Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-Write-Host 'Exporting Logo(s)...' -ForegroundColor DarkGray
-Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-Write-Host ''
-
 If ($ExportLogo) {
+
+    #Call function to export logo for application
+    Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host 'Exporting Logo(s)...' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
+
     ForEach ($Application in $Applications_Array) {
         $IconId = $Application.Application_IconId
         Export-Logo -IconId $IconId -AppName $Application.Application_Name
