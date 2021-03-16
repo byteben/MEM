@@ -484,10 +484,30 @@ If ($PackageApps) {
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Downloading Content' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
 
     ForEach ($Content in $Content_Array) {
         Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
         #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
         Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
     }
+
+    Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host 'Creating .IntuneWin File(s)' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
+
+    #Get Application and Deployment Type Details and Files
+    
+}
+
+#If the $CreateApps parameter was passed. Use the Win32Content Prep Tool to create Win32 Apps
+If ($CreateApps) {
+
+    Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host 'Creating Win32 Apps' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
 }
