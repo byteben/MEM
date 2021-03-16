@@ -504,7 +504,7 @@ If ($PackageApps) {
         Write-Host "Creating .Intunewin for:-" -ForegroundColor Cyan
         Write-Host "Application: ""$($Application.Application_Name)"""
 
-        ForEach ($Deployment in $DeploymentTypes_Array){
+        ForEach ($Deployment in $DeploymentTypes_Array | Where-Object {$_.Application_LogicalName -eq $Application.Application_LogicalName}){
 
             Write-Host "DeploymentType: ""$($Deployment.DeploymentType_Name)"""
 
