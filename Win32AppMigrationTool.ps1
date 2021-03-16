@@ -88,7 +88,7 @@ Function Export-Logo {
         [String]$IconId,
         [String]$AppName
     )
-    Write-Output "Preparing to export Application Logo for ""$($AppName)"""
+    Write-Host "Preparing to export Application Logo for ""$($AppName)"""
     If ($IconId) {
 
         #Check destination folder exists for logo
@@ -97,7 +97,7 @@ Function Export-Logo {
                 New-Item -Path $WorkingFolder_Logos -ItemType Directory -Force -ErrorAction Stop | Out-Null
             }
             Catch {
-                Write-Warning "Couldn't create ""$($WorkingFolder_Logos)"" folder for Application Logos"
+                Write-Host "Warning: Couldn't create ""$($WorkingFolder_Logos)"" folder for Application Logos" -ForegroundColor Red
             }
         }
 
@@ -114,7 +114,7 @@ Function Export-Logo {
                         New-Item -Path $LogoFolder_Id -ItemType Directory -Force -ErrorAction Stop | Out-Null
                     }
                     Catch {
-                        Write-Warning "Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo "
+                        Write-Host "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo " -ForegroundColor Red
                     }
                 }
 
@@ -131,21 +131,21 @@ Function Export-Logo {
                         $Logo = [Convert]::FromBase64String($Raw)
                         [System.IO.File]::WriteAllBytes($Logo_File, $Logo)
                         If (Test-Path $Logo_File) {
-                            Write-Output "Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)"""
+                            Write-Host "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -ForegroundColor Green
                         }
                     }
                     Catch {
-                        Write-Warning "Could not export Logo to folder ""$($LogoFolder_Id)"""
+                        Write-Host "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -ForegroundColor Red
                     }
                 }
             }
             else {
-                Write-Warning "Did not export Logo for ""$($AppName)"" to ""$($Logo_File)"" because the file already exists"
+                Write-Host "Information: Did not export Logo for ""$($AppName)"" to ""$($Logo_File)"" because the file already exists" -ForegroundColor Magenta
             }
         }
     }
     else {
-        Write-Warning "Null or invalid IconId passed to function. Could not export Logo"
+        Write-Host "Warning: Null or invalid IconId passed to function. Could not export Logo" -ForegroundColor Red
     }
 }
 
@@ -165,7 +165,7 @@ Function Get-FileFromInternet {
         Invoke-WebRequest -UseBasicParsing -Uri $URI -OutFile $FileDestination -ErrorAction Stop
     }
     Catch {
-        Write-Warning "Error downloading the Win32 Content Prep Tool"
+        Write-Host "Warning: Error downloading the Win32 Content Prep Tool" -ForegroundColor Red
         $_
     }
 }
@@ -268,7 +268,7 @@ Write-Host ''
 #Download Win32 Content Prep Tool
 Write-Host "Downloadling Win32 Content Prep Tool..." -ForegroundColor Cyan
 If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
-    Write-Output "IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download"
+    Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
 }
 else {
     Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
@@ -301,6 +301,12 @@ $DeploymentTypes_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -Chil
 $Applications_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Applications.csv") -NoTypeInformation -Force
 
 #Call function to export logo for application
+Write-Host ''
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host 'Exporting Logo(s)...' -ForegroundColor DarkGray
+Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+Write-Host ''
+
 If ($ExportLogo) {
     ForEach ($Application in $Applications_Array) {
         $IconId = $Application.Application_IconId
@@ -310,16 +316,22 @@ If ($ExportLogo) {
 
 #If the $PackageApps parameter was passed. Use the Win32Content Prep Tool to build Intune.win files
 If ($PackageApps) {
-    Write-Output "Preparing to create Intune.win files..."
+
+    Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host 'Building Intune.win Files...' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host ''
+
     ForEach ($Application in $Applications_Array) {
 
         #Create Folders
-        Write-Output "Creating Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)"""
+        Write-Host "Creating Folder ""$($Application.Application_LogicalName)"" for Application ""$($Application.Application_Name)""..." -ForegroundColor Cyan
         If (!(Test-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $Application.Application_LogicalName ))) {
             New-FolderToCreate -Root $WorkingFolder_Win32Apps -Folders $Application.Application_LogicalName
         }
         else {
-            Write-Warning "Folder ""$($Application.Application_LogicalName)"" Exists" 
+            Write-Host "Information: Folder ""$($Application.Application_LogicalName)"" already exists" -ForegroundColor Magenta
         }
     }
 }
