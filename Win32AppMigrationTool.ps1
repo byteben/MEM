@@ -64,7 +64,6 @@ Param (
 )
 
 #Create Global Variables
-$Global:WorkingFolder_SiteCode = $SiteCode
 $Global:WorkingFolder_Root = $WorkingFolder
 $Global:WorkingFolder_Logos = Join-Path -Path $WorkingFolder_Root -ChildPath "Logos"
 $Global:WorkingFolder_Content = Join-Path -Path $WorkingFolder_Root -ChildPath "Content"
@@ -81,14 +80,15 @@ Function Get-ContentFiles {
     <#
     Function to download Deployment Type Content from Content Source Folder
     #>
-Import-Module BitsTransfer
 
     Try {
-        Robocopy.exe $Source $Destination /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
+        $Robo = Robocopy.exe $Source $Destination /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
+        $Robo | Out-Null
+        Return $Done
     }
 
     Catch {
-        Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$(SDestination)"""
+        Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)"""
     }
 
 }
@@ -485,15 +485,9 @@ If ($PackageApps) {
     Write-Host 'Downloading Content' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 
-    #Change location
-    Set-Location $ENV:SystemDrive
-
     ForEach ($Content in $Content_Array) {
         Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
         #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
         Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
     }
-
-    #Set the current location to be the site code.
-    Set-Location "$($SiteCode):\"
 }
