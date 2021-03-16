@@ -1,4 +1,57 @@
-﻿Param (
+﻿<#
+===========================================================================
+Created on:   14/03/2021
+Created by:   Ben Whitmore
+Filename:     Win32AppMigrationTool.ps1
+===========================================================================
+
+Version 1.0 - 14/03/2021
+
+.Synopsis
+The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
+
+.Parameter AppName
+Pass a string to the toll to search for applications in ConfigMgr
+
+.Parameter SiteCode
+Specify the Sitecode you wish to connect to
+
+.Parameter ProviderMachineName
+Specify the Site Server to connect to
+
+.Parameter ExportLogo
+When passed, the Application logo is decoded from base64 and saved to the Logos folder
+
+.Parameter WorkingFolder
+This is the working folder for the Win32AppMigration Tool. Care should be given when specifying the working folder because downloaded content can increase the working folder size considerably. The Following folders are created in this directory:-
+
+-ContentPrepTool
+-Details
+-Logos
+-Logs
+-Win32Apps
+
+.Parameter PackageApp
+Pass this parameter to package selected apps in the .intunewin format
+
+.Parameter CreateApps
+Pass this parameter to create the Win32apps in Intune
+
+.Example
+.\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *"
+
+.Example
+.\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *" -ExportLogo
+
+.Example
+.\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *" -ExportLogo -PackageApps
+
+.Example
+.\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *" -ExportLogo -PackageApps -CreateApps
+
+#>
+
+Param (
     [Parameter(Mandatory = $True)]
     [String]$AppName,
     [String]$SiteCode,
@@ -15,6 +68,7 @@ Function Connect-SiteServer {
         [String]$SiteCode,
         [String]$ProviderMachineName
     )
+
     # Import the ConfigurationManager.psd1 module 
     Try {
         If ($Null -eq (Get-Module ConfigurationManager)) {
