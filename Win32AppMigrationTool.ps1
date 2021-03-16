@@ -82,8 +82,8 @@ Function Get-ContentFiles {
     #>
 
     Try {
-        $Robo = Robocopy.exe $Source $Destination /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
-        $Robo | Out-Null
+        $Robo = Robocopy.exe $Source $Destination /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
+        $Robo 
         Return $Done
     }
 
@@ -499,6 +499,18 @@ If ($PackageApps) {
     Write-Host ''
 
     #Get Application and Deployment Type Details and Files
+    ForEach ($Application in $Applications_Array) {
+
+        Write-Host "Creating .Intunewin for:-" -ForegroundColor Cyan
+        Write-Host "Application: ""$($Application.Application_Name)"""
+
+        ForEach ($Deployment in $DeploymentTypes_Array){
+
+            Write-Host "DeploymentType: ""$($Deployment.DeploymentType_Name)"""
+
+        }
+
+    }
     
 }
 
