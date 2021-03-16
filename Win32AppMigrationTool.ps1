@@ -331,10 +331,8 @@ If ($PackageApps) {
 
     Write-Host ''
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host 'Building Intune.win Files...' -ForegroundColor DarkGray
-    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host ''
     Write-Host 'Creating Application Folder(s)' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host ''
 
     ForEach ($Application in $Applications_Array) {
@@ -352,7 +350,9 @@ If ($PackageApps) {
     }
 
     Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating DeploymentType Folder(s)' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host ''
     ForEach ($DeploymentType in $DeploymentTypes_Array) {
 
@@ -368,7 +368,9 @@ If ($PackageApps) {
     }
 
     Write-Host ''
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating Content Folder(s)' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host ''
     ForEach ($DeploymentType in $DeploymentTypes_Array) {
 
@@ -382,4 +384,8 @@ If ($PackageApps) {
         }
         Write-Host ''
     }
+
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+    Write-Host 'Building Intune.win Files...' -ForegroundColor DarkGray
+    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 }
