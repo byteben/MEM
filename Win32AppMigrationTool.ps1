@@ -155,7 +155,16 @@ Function New-IntuneWin {
 
         #Try running the content prep tool to build the intunewin
         Try {
-            Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList "-s ""$($Command)"" -c ""$($SourceFolder)"" -o ""$($OutputFolder)"""
+            $Arguments = @(
+                "-s"
+                """$($Command)"""
+                "-c"
+                """$($SourceFolder)"""
+                "-o"
+                """$($OutputFolder)"""
+                "-q"
+            )
+            Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Arguments -Wait
         }
         Catch {
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
