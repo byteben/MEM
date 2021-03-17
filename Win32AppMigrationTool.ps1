@@ -159,12 +159,13 @@ Function New-IntuneWin {
                 "-s"
                 """$($Command)"""
                 "-c"
-                """$($SourceFolder)"""
+                """$($ContentFolder)"""
                 "-o"
                 """$($OutputFolder)"""
                 "-q"
             )
             Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Arguments -Wait
+            Return $Command
         }
         Catch {
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
@@ -654,8 +655,15 @@ If ($PackageApps) {
                 Write-Host "Intunewin Output Folder: ""$($OutputFolder)"""
                 Write-Host ''
                 Write-Host "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -ForegroundColor Cyan
-                New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
+                $IntuneWinFileResult = New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
+                $IntuneWinFile = $IntuneWinFileResult[0]
                 Write-Host ''
+                 
+                If (Test-Path (Join-Path -Path $OutputFolder -ChildPath "*.intunewin") ){
+                    Write-Host "Successfully created ""$($IntuneWinFile).intunewin"" at ""$($OutputFolder)""" -ForegroundColor Cyan
+                } else {
+                    Write-Host "Whoops. We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -ForegroundColor Red
+                }
             }
         }
     }
