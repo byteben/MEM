@@ -1,4 +1,9 @@
 ﻿<#
+.Synopsis
+The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
+
+.Description
+
 ===========================================================================
 Created on:   14/03/2021
 Created by:   Ben Whitmore
@@ -7,8 +12,6 @@ Filename:     Win32AppMigrationTool.ps1
 
 Version 1.0 - 14/03/2021
 
-.Synopsis
-The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Parameter AppName
 Pass a string to the toll to search for applications in ConfigMgr
@@ -25,6 +28,7 @@ When passed, the Application logo is decoded from base64 and saved to the Logos 
 .Parameter WorkingFolder
 This is the working folder for the Win32AppMigration Tool. Care should be given when specifying the working folder because downloaded content can increase the working folder size considerably. The Following folders are created in this directory:-
 
+-Content
 -ContentPrepTool
 -Details
 -Logos
@@ -72,6 +76,67 @@ $Global:WorkingFolder_Logs = Join-Path -Path $WorkingFolder_Root -ChildPath "Log
 $Global:WorkingFolder_Detail = Join-Path -Path $WorkingFolder_Root -ChildPath "Details"
 $Global:WorkingFolder_Win32Apps = Join-Path -Path $WorkingFolder_Root -ChildPath "Win32Apps"
 
+Function New-IntuneWin {
+    Param (
+        [String]$ContentFolder,
+        [String]$OutputFolder,
+        [String]$SetupFile
+    )
+    <#
+    Function to create new Intunewin
+    #>
+
+    #If PowerShell is reference, grab the name of the .ps1 referenced in the Install Command line
+    If ($SetupFile -match "powershell" -and $SetupFile -match "\.ps1") {
+        Write-Host "Powershell script detected"
+        $Right = ($SetupFile -split ".ps1")[0]
+        $Right = ($Right -Split " ")[-1]
+        $Right = $Right.TrimStart("\", ".", "`"")
+        $Command = $Right + ".ps1"
+        Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+        Write-Host $Command -ForegroundColor Green
+    }
+    else {
+
+        #Search the Install Command line for other .exe installers
+        If ($SetupFile -match "`.exe") {
+            $Installer = ".exe"
+            Write-Host "$Installer installer detected"
+            $Right = ($SetupFile -split "\.exe")[0]
+            $Right = ($Right -Split " ")[-1]
+            $Command = $Right + $Installer
+            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host $Command -ForegroundColor Green
+        }
+        elseif ($SetupFile -match "`.msi") {
+            $Installer = ".msi"
+            Write-Host "$Installer installer detected"
+            $Right = ($SetupFile -split "\.msi")[0]
+            $Right = ($Right -Split " ")[-1]
+            $Command = $Right + $Installer
+            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host $Command -ForegroundColor Green
+        }
+        elseif ($SetupFile -match "`.cmd") {
+            $Installer = ".cmd"
+            Write-Host "$Installer installer detected"
+            $Right = ($SetupFile -split "\.cmd")[0]
+            $Right = ($Right -Split " ")[-1]
+            $Command = $Right + $Installer
+            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host $Command -ForegroundColor Green
+        }
+        elseif ($SetupFile -match "`.bat") {
+            $Installer = ".bat"
+            Write-Host "$Installer installer detected"
+            $Right = ($SetupFile -split "\.bat")[0]
+            $Right = ($Right -Split " ")[-1]
+            $Command = $Right + $Installer
+            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host $Command -ForegroundColor Green
+        }
+    }
+}
 Function Get-ContentFiles {
     Param (
         [String]$Source,
@@ -330,6 +395,7 @@ Function Get-AppInfo {
     } 
     Return $DeploymentTypes, $ApplicationTypes, $Content
 }
+
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host 'Script Start Win32AppMigrationTool' -ForegroundColor DarkGray
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
@@ -339,6 +405,7 @@ Write-Host ''
 Write-Host 'Connecting to Site Server..' -ForegroundColor Cyan
 Connect-SiteServer -SiteCode  $SiteCode -ProviderMachineName $ProviderMachineName
 
+#Region Check_Folders
 Write-Host ''
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host 'Checking Win32AppMigrationTool Folder Structure...' -ForegroundColor DarkGray
@@ -348,6 +415,7 @@ Write-Host ''
 #Create Folders
 Write-Host "Creating Folders..."-ForegroundColor Cyan
 New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "Content", "ContentPrepTool", "Logs", "Details", "Win32Apps")
+#EndRegion Check_Folders
 
 #Region Get_Content_Tool
 Write-Host ''
@@ -518,19 +586,32 @@ If ($PackageApps) {
     ForEach ($Application in $Applications_Array) {
 
         Write-Host ''
-        Write-Host "Creating .Intunewin for:-" -ForegroundColor Cyan
+        Write-Host '--------------------------------------------' -ForegroundColor DarkGray
         Write-Host """$($Application.Application_Name)""" -ForegroundColor Green
         Write-Host "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:"
+        Write-Host '--------------------------------------------' -ForegroundColor DarkGray
         Write-Host ''
 
         ForEach ($Deployment in $DeploymentTypes_Array | Where-Object { $_.Application_LogicalName -eq $Application.Application_LogicalName }) {
 
-            Write-Host "DeploymentType Name: ""$($Deployment.DeploymentType_Name)"""
+            Write-Host """$($Deployment.DeploymentType_Name)""" -ForegroundColor Green
+            
+            #Grab install command executable or script
+            $SetupFile = $Deployment.DeploymentType_InstallCommandLine
+            Write-Host "Install Command: ""$($SetupFile)"""
 
             ForEach ($Content in $Content_Array | Where-Object { $_.Content_DeploymentType_LogicalName -eq $Deployment.DeploymentType_LogicalName }) {
 
-                Write-Host "Content Folder: ""$($WorkingFolder_Content)\$($Application.Application_LogicalName)\$($Deployment.DeploymentType_LogicalName)"""
-                Write-Host "Intunewin Output Folder: ""$($WorkingFolder_Win32Apps)\$($Application.Application_LogicalName)\$($Deployment.DeploymentType_LogicalName)"""
+                #Create variables to pass to Function
+                $ContentFolder = Join-Path -Path (Join-Path -Path $WorkingFolder_Content -ChildPath $Application.Application_LogicalName) -ChildPath $Deployment.DeploymentType_LogicalName
+                $OutputFolder = Join-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $Application.Application_LogicalName) -ChildPath $Deployment.DeploymentType_LogicalName
+                $SetupFile = $Deployment.DeploymentType_InstallCommandLine
+
+                Write-Host "Content Folder: ""$($ContentFolder)"""
+                Write-Host "Intunewin Output Folder: ""$($OutputFolder)"""
+                Write-Host ''
+                Write-Host "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -ForegroundColor Cyan
+                New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
                 Write-Host ''
             }
         }
