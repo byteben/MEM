@@ -158,18 +158,14 @@ Function New-IntuneWin {
         )
         Write-Host "IntuneWinAppUtil.exe -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
 
-        #Change location for Start-Process
-        Set-location $ENV:SystemDrive
-
         #Try running the content prep tool to build the intunewin
         Try {
-            (Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Args -Wait).ExitCode
+            Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Args -Wait
         }
         Catch {
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
-            
+            Write-Host $_ -ForegroundColor Red
         }
-        Set-Location "$($SiteCode):\"
     }
     Catch {
         Write-Host "The script encounted an error getting the Win32 Content Prep Tool" -ForegroundColor Red
