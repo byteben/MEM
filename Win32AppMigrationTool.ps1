@@ -349,6 +349,7 @@ Write-Host ''
 Write-Host "Creating Folders..."-ForegroundColor Cyan
 New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "Content", "ContentPrepTool", "Logs", "Details", "Win32Apps")
 
+#Region Get_Content_Tool
 Write-Host ''
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host 'Checking Win32AppMigrationTool Content Tool...' -ForegroundColor DarkGray
@@ -364,7 +365,9 @@ else {
     Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
     Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
 }
+#EndRegion Get_Content_Tool
 
+#Region Display_Application_Results
 Write-Host ''
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host 'Checking Applications...' -ForegroundColor DarkGray
@@ -380,7 +383,9 @@ If ($ApplicationName) {
         Write-Host """$($Application)""" -ForegroundColor Green
     }
 }
+#EndRegion Display_Application_Results
 
+#Region Export_Details_CSV
 #Call function to grab deployment type detail for application
 $App_Array = Get-AppInfo -ApplicationName $ApplicationName
 $DeploymentTypes_Array = $App_Array[0]
@@ -406,7 +411,9 @@ Try {
 Catch {
     Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
 }
+#EndRegion Export_Details_CSV
 
+#Region Exporting_Logos
 If ($ExportLogo) {
 
     #Call function to export logo for application
@@ -421,10 +428,12 @@ If ($ExportLogo) {
         Export-Logo -IconId $IconId -AppName $Application.Application_Name
     }
 }
+#EndRegion Exporting_Logos
 
+#Region Package_Apps
 #If the $PackageApps parameter was passed. Use the Win32Content Prep Tool to build Intune.win files
 If ($PackageApps) {
-
+    #Region Creating_Application_Folders
     Write-Host ''
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating Application Folder(s)' -ForegroundColor DarkGray
@@ -444,7 +453,9 @@ If ($PackageApps) {
         }
         Write-Host ''
     }
+    #EndRegion Creating_Application_Folders
 
+    #Region Creating_DeploymentType_Folders
     Write-Host ''
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating DeploymentType Folder(s)' -ForegroundColor DarkGray
@@ -462,7 +473,9 @@ If ($PackageApps) {
         }
         Write-Host ''
     }
+    #EndRegion Creating_DeploymentType_Folders
 
+    #Region Creating_Content_Folders
     Write-Host ''
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating Content Folder(s)' -ForegroundColor DarkGray
@@ -480,7 +493,9 @@ If ($PackageApps) {
         }
         Write-Host ''
     }
+    #EndRegion Creating_Content_Folders
 
+    #Region Downloading_Content
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Downloading Content' -ForegroundColor DarkGray
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
@@ -491,7 +506,9 @@ If ($PackageApps) {
         #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
         Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
     }
+    #EndRegion Downloading_Content
 
+    #Region Create_Intunewin_Files
     Write-Host ''
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host 'Creating .IntuneWin File(s)' -ForegroundColor DarkGray
@@ -505,7 +522,7 @@ If ($PackageApps) {
         Write-Host """$($Application.Application_Name)""" -ForegroundColor Green
         Write-Host "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:"
         Write-Host ''
-        
+
         ForEach ($Deployment in $DeploymentTypes_Array | Where-Object { $_.Application_LogicalName -eq $Application.Application_LogicalName }) {
 
             Write-Host "DeploymentType Name: ""$($Deployment.DeploymentType_Name)"""
@@ -519,7 +536,11 @@ If ($PackageApps) {
         }
     }
 }
+#EndRegion Create_Intunewin_Files
 
+#EndRegion Package_Apps
+
+#Region Create_Apps
 #If the $CreateApps parameter was passed. Use the Win32Content Prep Tool to create Win32 Apps
 If ($CreateApps) {
 
@@ -529,3 +550,4 @@ If ($CreateApps) {
     Write-Host '--------------------------------------------' -ForegroundColor DarkGray
     Write-Host ''
 }
+#EndRegion Create_Apps
