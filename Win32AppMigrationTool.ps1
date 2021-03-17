@@ -88,12 +88,13 @@ Function New-IntuneWin {
 
     #If PowerShell is reference, grab the name of the .ps1 referenced in the Install Command line
     If ($SetupFile -match "powershell" -and $SetupFile -match "\.ps1") {
-        Write-Host "Powershell script detected"
+        Write-Host "Powershell script detected" -ForegroundColor Yellow
+        Write-Host ''
         $Right = ($SetupFile -split ".ps1")[0]
         $Right = ($Right -Split " ")[-1]
         $Right = $Right.TrimStart("\", ".", "`"")
         $Command = $Right + ".ps1"
-        Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+        Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
         Write-Host $Command -ForegroundColor Green
     }
     else {
@@ -105,7 +106,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.exe")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
-            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.msi") {
@@ -114,7 +115,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.msi")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
-            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.cmd") {
@@ -123,7 +124,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.cmd")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
-            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.bat") {
@@ -132,7 +133,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.bat")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
-            Write-Host "Using the following command for the Microsoft Win32 Content Prep Tool:"
+            Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Host $Command -ForegroundColor Green
         }
     }
@@ -146,24 +147,15 @@ Function New-IntuneWin {
         }
         else {
             Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
-            Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+            Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
         }
         Write-Host ''
         Write-Host "Building IntuneWinAppUtil.exe execution string..." -ForegroundColor Cyan
-        $Args = @(
-            "-s"
-            """$Command"""
-            "-c"
-            """$ContentFolder"""
-            "-o"
-            """$OutputFolder"""
-            "-q"
-        )
         Write-Host """$($WorkingFolder_ContentPrepTool)\IntuneWinAppUtil.exe"" -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
 
         #Try running the content prep tool to build the intunewin
         Try {
-            Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Args -Wait
+            Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList "-s ""$($Command)"" -c ""$($SourceFolder)"" -o ""$($OutputFolder)"""
         }
         Catch {
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
@@ -468,9 +460,11 @@ If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "Intune
 }
 else {
     Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
-    Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+    Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
 }
+
 #EndRegion Get_Content_Tool
+
 
 #Region Display_Application_Results
 Write-Host ''
@@ -643,7 +637,7 @@ If ($PackageApps) {
             ForEach ($Content in $Content_Array | Where-Object { $_.Content_DeploymentType_LogicalName -eq $Deployment.DeploymentType_LogicalName }) {
 
                 #Create variables to pass to Function
-                $ContentFolder = Join-Path -Path (Join-Path -Path $WorkingFolder_Content -ChildPath $Application.Application_LogicalName) -ChildPath $Deployment.DeploymentType_LogicalName
+                $ContentFolder = Join-Path -Path $WorkingFolder_Content -ChildPath $Deployment.DeploymentType_LogicalName
                 $OutputFolder = Join-Path -Path (Join-Path -Path $WorkingFolder_Win32Apps -ChildPath $Application.Application_LogicalName) -ChildPath $Deployment.DeploymentType_LogicalName
                 $SetupFile = $Deployment.DeploymentType_InstallCommandLine
 
