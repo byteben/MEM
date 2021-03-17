@@ -136,9 +136,11 @@ Function New-IntuneWin {
             Write-Host $Command -ForegroundColor Green
         }
     }
-    
+    Write-Host ''
+
     Try {
         #Check IntuneWinAppUtil.exe
+        Write-Host "Re-checking presence of Win32 Content Prep Tool..." -ForegroundColor Cyan
         If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
             Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
         }
@@ -146,6 +148,7 @@ Function New-IntuneWin {
             Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
             Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
         }
+        Write-Host ''
         Write-Host "Building IntuneWinAppUtil.exe execution string..." -ForegroundColor Cyan
         $Args = @(
             "-s"
@@ -156,7 +159,7 @@ Function New-IntuneWin {
             """$OutputFolder"""
             "-q"
         )
-        Write-Host "IntuneWinAppUtil.exe -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
+        Write-Host """$($WorkingFolder_ContentPrepTool)\IntuneWinAppUtil.exe"" -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
 
         #Try running the content prep tool to build the intunewin
         Try {
