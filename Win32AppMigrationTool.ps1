@@ -136,6 +136,44 @@ Function New-IntuneWin {
             Write-Host $Command -ForegroundColor Green
         }
     }
+    
+    Try {
+        #Check IntuneWinAppUtil.exe
+        If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
+            Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
+        }
+        else {
+            Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
+            Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/blob/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+        }
+        Write-Host "Building IntuneWinAppUtil.exe execution string..." -ForegroundColor Cyan
+        $Args = @(
+            "-s"
+            """$Command"""
+            "-c"
+            """$ContentFolder"""
+            "-o"
+            """$OutputFolder"""
+            "-q"
+        )
+        Write-Host "IntuneWinAppUtil.exe -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
+
+        #Change location for Start-Process
+        Set-location $ENV:SystemDrive
+
+        #Try running the content prep tool to build the intunewin
+        Try {
+            (Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Args -Wait).ExitCode
+        }
+        Catch {
+            Write-Host "Error creating the .intunewin file" -ForegroundColor Red
+            
+        }
+        Set-Location "$($SiteCode):\"
+    }
+    Catch {
+        Write-Host "The script encounted an error getting the Win32 Content Prep Tool" -ForegroundColor Red
+    }
 }
 Function Get-ContentFiles {
     Param (
@@ -593,9 +631,12 @@ If ($PackageApps) {
         Write-Host ''
 
         ForEach ($Deployment in $DeploymentTypes_Array | Where-Object { $_.Application_LogicalName -eq $Application.Application_LogicalName }) {
-
-            Write-Host """$($Deployment.DeploymentType_Name)""" -ForegroundColor Green
             
+            Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+            Write-Host """$($Deployment.DeploymentType_Name)""" -ForegroundColor Green
+            Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+            Write-Host ''
+
             #Grab install command executable or script
             $SetupFile = $Deployment.DeploymentType_InstallCommandLine
             Write-Host "Install Command: ""$($SetupFile)"""
