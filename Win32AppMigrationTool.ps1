@@ -157,15 +157,15 @@ Function New-IntuneWin {
         Try {
             $Arguments = @(
                 "-s"
-                """$($Command)"""
+                $Command
                 "-c"
-                """$($ContentFolder)"""
+                $ContentFolder
                 "-o"
-                """$($OutputFolder)"""
+                $OutputFolder
                 "-q"
             )
             Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Arguments -Wait
-            Return $Command
+            Return $Right
         }
         Catch {
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
@@ -655,8 +655,8 @@ If ($PackageApps) {
                 Write-Host "Intunewin Output Folder: ""$($OutputFolder)"""
                 Write-Host ''
                 Write-Host "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -ForegroundColor Cyan
-                $IntuneWinFileResult = New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
-                $IntuneWinFile = $IntuneWinFileResult[0]
+                $IntuneWinFileCommand = New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
+                $IntuneWinFile = $IntuneWinFileCommand
                 Write-Host ''
                  
                 If (Test-Path (Join-Path -Path $OutputFolder -ChildPath "*.intunewin") ){
