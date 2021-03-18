@@ -345,7 +345,6 @@ Function Get-FileFromInternet {
     
     $File = $URI -replace '.*/'
     $FileDestination = Join-Path -Path $Destination -ChildPath $File
-    $file
     Try {
         Invoke-WebRequest -UseBasicParsing -Uri $URI -OutFile $FileDestination -ErrorAction Stop
     }
@@ -464,15 +463,18 @@ Write-Host '--------------------------------------------' -ForegroundColor DarkG
 Write-Host ''
 
 #Download Win32 Content Prep Tool
-Write-Host "Downloadling Win32 Content Prep Tool..." -ForegroundColor Cyan
-If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
-    Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
-}
+If ($PackageApps) {
+    Write-Host "Downloadling Win32 Content Prep Tool..." -ForegroundColor Cyan
+    If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
+        Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
+    }
+    else {
+        Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+    }
+} 
 else {
-    Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
-    Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
+    Write-Host "The -PackageApps parameter was not passed. Skipping downloading of the Win32 Content Prep Tool." -ForegroundColor Magenta
 }
-
 #EndRegion Get_Content_Tool
 
 
@@ -484,10 +486,10 @@ Write-Host '--------------------------------------------' -ForegroundColor DarkG
 Write-Host ''
 
 #Get list of Applications
-$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object
+$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $ApplicationName
 
 If ($ApplicationName) {
-    Write-Host "The Win32App Migration Tool Found the following matches for ""$($AppName)"""
+    Write-Host "The Win32App Migration Tool will proces the following Applications:"
     ForEach ($Application in $ApplicationName) {
         Write-Host """$($Application)""" -ForegroundColor Green
     }
@@ -520,6 +522,7 @@ Try {
 Catch {
     Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
 }
+Write-Host "Details of the selected Applications and Deployment Types can be found at ""$($WorkingFolder_Detail)"""
 #EndRegion Export_Details_CSV
 
 #Region Exporting_Logos
@@ -605,15 +608,20 @@ If ($PackageApps) {
     #EndRegion Creating_Content_Folders
 
     #Region Downloading_Content
-    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host 'Downloading Content' -ForegroundColor DarkGray
-    Write-Host '--------------------------------------------' -ForegroundColor DarkGray
-    Write-Host ''
+    If ($PackageApps) {
+        Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+        Write-Host 'Downloading Content' -ForegroundColor DarkGray
+        Write-Host '--------------------------------------------' -ForegroundColor DarkGray
+        Write-Host ''
 
-    ForEach ($Content in $Content_Array) {
-        Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
-        #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
-        Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
+        ForEach ($Content in $Content_Array) {
+            Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
+            #$Files = Get-ChildItem -Path $Content.Content_Location -recurse | Select-Object -ExpandProperty Name
+            Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
+        }
+    }
+    else {
+        Write-Host "The -PackageApps parameter was not passed. Application and Deployment Type information will be gathered only, content will not be downloaded" -ForegroundColor Magenta
     }
     #EndRegion Downloading_Content
 
@@ -659,10 +667,11 @@ If ($PackageApps) {
                 $IntuneWinFile = $IntuneWinFileCommand
                 Write-Host ''
                  
-                If (Test-Path (Join-Path -Path $OutputFolder -ChildPath "*.intunewin") ){
+                If (Test-Path (Join-Path -Path $OutputFolder -ChildPath "*.intunewin") ) {
                     Write-Host "Successfully created ""$($IntuneWinFile).intunewin"" at ""$($OutputFolder)""" -ForegroundColor Cyan
-                } else {
-                    Write-Host "Whoops. We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -ForegroundColor Red
+                }
+                else {
+                    Write-Host "Error: We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -ForegroundColor Red
                 }
             }
         }
@@ -683,3 +692,5 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
+Write-Host ''
+Write-Host '## The Win32AppMigrationTool Script has Finished ##'
