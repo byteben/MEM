@@ -7,7 +7,11 @@ Filename:     Win32AppMigrationTool.ps1
 The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Description
+Version 1.03.18 - 18/03/2021
+## BETA Release for Testing ##
+
 Version 1.0 - 14/03/2021
+## DEV Release ##
 
 .Parameter AppName
 Pass a string to the toll to search for applications in ConfigMgr
