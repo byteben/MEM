@@ -98,10 +98,10 @@ function Write-Log {
     <#
     Function to write log information
     #>
-    If ($TimeStamp) {
-        (Get-Date -f g) | Out-File -Encoding Ascii -Append (Join-Path -Path $WorkingFolder_Logs -ChildPath $Log)
-    }
-    $Message | Out-File -Encoding Ascii -Append (Join-Path -Path $WorkingFolder_Logs -ChildPath $Log)
+
+    $Output = (Get-Date -f g) + ": " + $Message
+    $Output | Out-File -Encoding Ascii -Append (Join-Path -Path $WorkingFolder_Logs -ChildPath $Log)
+
 }
 Function New-IntuneWin {
     Param (
@@ -112,7 +112,7 @@ Function New-IntuneWin {
     <#
     Function to create new Intunewin
     #>
-    Write-Log -Message "Function: New-IntuneWin was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: New-IntuneWin was called" -Log "Main.log" 
 
     #If PowerShell is reference, grab the name of the .ps1 referenced in the Install Command line
     If ($SetupFile -match "powershell" -and $SetupFile -match "\.ps1") {
@@ -212,7 +212,7 @@ Function Get-ContentFiles {
     <#
     Function to download Deployment Type Content from Content Source Folder
     #>
-    Write-Log -Message "Function: Get-ContentFiles was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: Get-ContentFiles was called" -Log "Main.log" 
 
     Try {
         $Robo = Robocopy.exe $Source $Destination /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
@@ -234,7 +234,7 @@ Function Connect-SiteServer {
     <#
     Function to connect to ConfigMgr
     #>
-    Write-Log -Message "Function: Connect-SiteServer was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: Connect-SiteServer was called" -Log "Main.log" 
 
     # Import the ConfigurationManager.psd1 module 
     Try {
@@ -257,7 +257,7 @@ Function Connect-SiteServer {
         #Set the current location to be the site code.
         Write-Log -Message "Set-Location $($SiteCode):\" -Log "Main.log"
         Set-Location "$($SiteCode):\"
-        Write-Log -Message "Connected to provider $($ProviderMachineName) at site $($SiteCode)" -Log "Main.log" -TimeStamp
+        Write-Log -Message "Connected to provider $($ProviderMachineName) at site $($SiteCode)" -Log "Main.log" 
         Write-Host "Connected to provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Green
     }
     Catch {
@@ -276,7 +276,7 @@ Function New-FolderToCreate {
     Function to create folder structure for Win32AppMigrationTool
     #>  
 
-    Write-Log -Message "Function: New-FolderToCreate was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: New-FolderToCreate was called" -Log "Main.log" 
     
     If (!($Root)) {
         Write-Log -Message "Error: No Root Folder passed to Function" -Log "Main.log"
@@ -320,7 +320,7 @@ Function Export-Logo {
     Function to decode and export Base64 image for application logo to an output folder
     #>
 
-    Write-Log -Message "Function: Export-Logo was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: Export-Logo was called" -Log "Main.log" 
     Write-Host "Preparing to export Application Logo for ""$($AppName)"""
     If ($IconId) {
 
@@ -348,11 +348,11 @@ Function Export-Logo {
 
                 If (!(Test-Path $LogoFolder_Id)) {
                     Try {
-                        Write-Log -Message "New-Item -Path $($LogoFolder_Id) -ItemType Directory -Force -ErrorAction Stop | Out-Null" -Log "Main.log" -TimeStamp
+                        Write-Log -Message "New-Item -Path $($LogoFolder_Id) -ItemType Directory -Force -ErrorAction Stop | Out-Null" -Log "Main.log" 
                         New-Item -Path $LogoFolder_Id -ItemType Directory -Force -ErrorAction Stop | Out-Null
                     }
                     Catch {
-                        Write-Log -Message "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo" -Log "Main.log" -TimeStamp
+                        Write-Log -Message "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo" -Log "Main.log" 
                         Write-Host "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo" -ForegroundColor Red
                     }
                 }
@@ -361,7 +361,7 @@ Function Export-Logo {
                 If (Test-Path $LogoFolder_Id) {
                     Try {
                         #Grab the SDMPackgeXML which contains the Application and Deployment Type details
-                        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name $($AppName) | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" -TimeStamp
+                        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name ""$($AppName)"" | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" 
                         $XMLPackage = Get-CMApplication -Name $AppName | Where-Object { $Null -ne $_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML
 
                         #Deserialize SDMPackageXML
@@ -371,12 +371,12 @@ Function Export-Logo {
                         $Logo = [Convert]::FromBase64String($Raw)
                         [System.IO.File]::WriteAllBytes($Logo_File, $Logo)
                         If (Test-Path $Logo_File) {
-                            Write-Log -Message "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -Log "Main.log" -TimeStamp
+                            Write-Log -Message "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -Log "Main.log" 
                             Write-Host "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -ForegroundColor Green
                         }
                     }
                     Catch {
-                        Write-Log -Message "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -Log "Main.log" -TimeStamp
+                        Write-Log -Message "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -Log "Main.log" 
                         Write-Host "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -ForegroundColor Red
                     }
                 }
@@ -388,7 +388,7 @@ Function Export-Logo {
         }
     }
     else {
-        Write-Log -Message "Warning: Null or invalid IconId passed to function. Could not export Logo" -Log "Main.log" -TimeStamp
+        Write-Log -Message "Warning: Null or invalid IconId passed to function. Could not export Logo" -Log "Main.log" 
         Write-Host "Warning: Null or invalid IconId passed to function. Could not export Logo" -ForegroundColor Red
     }
 }
@@ -402,7 +402,7 @@ Function Get-FileFromInternet {
     Function to download and extract ContentPrep Tool
     #>
 
-    Write-Log -Message "Function: Get-FileFromInternet was called" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Function: Get-FileFromInternet was called" -Log "Main.log" 
 
     $File = $URI -replace '.*/'
     $FileDestination = Join-Path -Path $Destination -ChildPath $File
@@ -415,13 +415,13 @@ Function Get-FileFromInternet {
     }
 }
 Function Get-AppInfo {
-    <#
-    Function to get deployment type(s) for applcation(s) passed
-    #>
     Param (
         [String[]]$ApplicationName
     )
-    Write-Log -Message "Function: Get-AppInfo was called" -Log "Main.log" -TimeStamp
+    <#
+    Function to get deployment type(s) for applcation(s) passed
+    #>
+    Write-Log -Message "Function: Get-AppInfo was called" -Log "Main.log" 
 
     #Create Array to display Application and Deployment Type Information
     $DeploymentTypes = @()
@@ -432,12 +432,12 @@ Function Get-AppInfo {
     ForEach ($Application in $ApplicationName) {
 
         #Grab the SDMPackgeXML which contains the Application and Deployment Type details
-        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name $($Application) | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" -TimeStamp
+        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name ""$($Application)"" | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" 
         $XMLPackage = Get-CMApplication -Name $Application | Where-Object { $Null -ne $_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML
-
+        
         #Deserialize SDMPackageXML
         $XMLContent = [xml]($XMLPackage)
-
+        
         #Get total number of Deployment Types for the Application
         Write-Log -Message "`$TotalDeploymentTypes = $($XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count)" -Log "Main.log"
         $TotalDeploymentTypes = $XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count
@@ -539,11 +539,11 @@ Write-Host '--------------------------------------------' -ForegroundColor DarkG
 Write-Host ''
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
-Write-Log -Message "ScriptRoot = $($ScriptRoot)" -Log "Main.log" -TimeStamp
+Write-Log -Message "ScriptRoot = $($ScriptRoot)" -Log "Main.log" 
 
 #Connect to Site Server
 Write-Host 'Connecting to Site Server...' -ForegroundColor Cyan
-Write-Log -Message "Connect-SiteServer -SiteCode $($SiteCode) -ProviderMachineName $($ProviderMachineName)" -Log "Main.log" -TimeStamp
+Write-Log -Message "Connect-SiteServer -SiteCode $($SiteCode) -ProviderMachineName $($ProviderMachineName)" -Log "Main.log" 
 Connect-SiteServer -SiteCode  $SiteCode -ProviderMachineName $ProviderMachineName
 
 #Region Check_Folders
@@ -558,7 +558,7 @@ Write-Host ''
 
 #Create Folders
 Write-Host "Creating Folders..."-ForegroundColor Cyan
-Write-Log -Message "New-FolderToCreate -Root ""$($WorkingFolder_Root)"" -Folders @("""", ""Logos"", ""Content"", ""ContentPrepTool"", ""Logs"", ""Details"", ""Win32Apps"")" -Log "Main.log" -TimeStamp
+Write-Log -Message "New-FolderToCreate -Root ""$($WorkingFolder_Root)"" -Folders @("""", ""Logos"", ""Content"", ""ContentPrepTool"", ""Logs"", ""Details"", ""Win32Apps"")" -Log "Main.log" 
 New-FolderToCreate -Root $WorkingFolder_Root -Folders @("", "Logos", "Content", "ContentPrepTool", "Logs", "Details", "Win32Apps")
 #EndRegion Check_Folders
 
@@ -576,16 +576,16 @@ Write-Host ''
 If ($PackageApps) {
     Write-Host "Downloadling Win32 Content Prep Tool..." -ForegroundColor Cyan
     If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
-        Write-Log -Message "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -Log "Main.log" -TimeStamp
+        Write-Log -Message "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -Log "Main.log" 
         Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
     }
     else {
-        Write-Log -Message "Get-FileFromInternet -URI ""https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe"" -Destination $($WorkingFolder_ContentPrepTool)" -Log "Main.log" -TimeStamp
+        Write-Log -Message "Get-FileFromInternet -URI ""https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe"" -Destination $($WorkingFolder_ContentPrepTool)" -Log "Main.log" 
         Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
     }
 } 
 else {
-    Write-Log -Message "The -PackageApps parameter was not passed. Skipping downloading of the Win32 Content Prep Tool." -Log "Main.log" -TimeStamp
+    Write-Log -Message "The -PackageApps parameter was not passed. Skipping downloading of the Win32 Content Prep Tool." -Log "Main.log" 
     Write-Host "The -PackageApps parameter was not passed. Skipping downloading of the Win32 Content Prep Tool." -ForegroundColor Magenta
 }
 #EndRegion Get_Content_Tool
@@ -602,12 +602,12 @@ Write-Host '--------------------------------------------' -ForegroundColor DarkG
 Write-Host ''
 
 #Get list of Applications
-Write-Log -Message "Get-CMApplication -Fast | Where-Object { $($_.LocalizedDisplayName) -like $($AppName) } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $($ApplicationName) -Title ""Select an Application(s) to process the associated Deployment Types""" -Log "Main.log" -TimeStamp
+Write-Log -Message "Get-CMApplication -Fast | Where-Object { $($_.LocalizedDisplayName) -like $($AppName) } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $($ApplicationName) -Title ""Select an Application(s) to process the associated Deployment Types""" -Log "Main.log" 
 $ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $ApplicationName -Title "Select an Application(s) to process the associated Deployment Types"
 
 If ($ApplicationName) {
-    Write-Log -Message "The Win32App Migration Tool will proces the following Applications:" -Log "Main.log"
-    Write-Host "The Win32App Migration Tool will proces the following Applications:"
+    Write-Log -Message "The Win32App Migration Tool will process the following Applications:" -Log "Main.log"
+    Write-Host "The Win32App Migration Tool will process the following Applications:"
     ForEach ($Application in $ApplicationName) {
         Write-Log -Message "$($Application)" -Log "Main.log"
         Write-Host """$($Application)""" -ForegroundColor Green
@@ -616,7 +616,7 @@ If ($ApplicationName) {
 #EndRegion Display_Application_Results
 
 #Region Export_Details_CSV
-Write-Log -Message "Calling function to grab deployment type detail for application(s)" -Log "Main.log" -TimeStamp
+Write-Log -Message "Calling function to grab deployment type detail for application(s)" -Log "Main.log" 
 #Calling function to grab deployment type detail for application(s)
 Write-Log -Message "`$App_Array = Get-AppInfo -ApplicationName $($ApplicationName)" -Log "Main.log"
 $App_Array = Get-AppInfo -ApplicationName $ApplicationName
@@ -627,27 +627,27 @@ $Content_Array = $App_Array[2]
 #Export $DeploymentTypes to CSV for reference
 Try {
     $DeploymentTypes_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "DeploymentTypes.csv") -NoTypeInformation -Force
-    Write-Log -Message "`$DeploymentTypes_Array is located at $($WorkingFolder_Detail)\DeploymentTypes.csv" -Log "Main.log" -TimeStamp
+    Write-Log -Message "`$DeploymentTypes_Array is located at $($WorkingFolder_Detail)\DeploymentTypes.csv" -Log "Main.log" 
 }
 Catch {
     Write-Host "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -ForegroundColor Red
-    Write-Log -Message "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Error: Could not Export DeploymentTypes.csv. Do you have it open?" -Log "Main.log" 
 }
 Try {
     $Applications_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Applications.csv") -NoTypeInformation -Force
-    Write-Log -Message "`$Applications_Array is located at $($WorkingFolder_Detail)\Applications.csv" -Log "Main.log" -TimeStamp
+    Write-Log -Message "`$Applications_Array is located at $($WorkingFolder_Detail)\Applications.csv" -Log "Main.log" 
 }
 Catch {
     Write-Host "Error: Could not Export Applications.csv. Do you have it open?" -ForegroundColor Red
-    Write-Log -Message "Error: Could not Export Applications.csv. Do you have it open?" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Error: Could not Export Applications.csv. Do you have it open?" -Log "Main.log" 
 }
 Try {
     $Content_Array | Export-Csv (Join-Path -Path $WorkingFolder_Detail -ChildPath "Content.csv") -NoTypeInformation -Force
-    Write-Log -Message "`$Content_Array is located at $($WorkingFolder_Detail)\Content.csv" -Log "Main.log" -TimeStamp
+    Write-Log -Message "`$Content_Array is located at $($WorkingFolder_Detail)\Content.csv" -Log "Main.log" 
 }
 Catch {
     Write-Host "Error: Could not Export Content.csv. Do you have it open?" -ForegroundColor Red
-    Write-Log -Message "Error: Could not Export Content.csv. Do you have it open?" -Log "Main.log" -TimeStamp
+    Write-Log -Message "Error: Could not Export Content.csv. Do you have it open?" -Log "Main.log" 
 }
 Write-Host "Details of the selected Applications and Deployment Types can be found at ""$($WorkingFolder_Detail)"""
 #EndRegion Export_Details_CSV
@@ -771,13 +771,13 @@ If ($PackageApps) {
     ForEach ($Content in $Content_Array) {
         Write-Log -Message "Downloading Content for Deployment Type $($Content.Content_DeploymentType_LogicalName) from Content Source $($Content.Content_Location)..." -Log "Main.log"
         Write-Host "Downloading Content for Deployment Type ""$($Content.Content_DeploymentType_LogicalName)"" from Content Source ""$($Content.Content_Location)""..." -ForegroundColor Cyan
-        Write-Log -Message "Get-ContentFiles -Source $($Content.Content_Location) -Destination (Join-Path -Path $($WorkingFolder_Content) -ChildPath $($Content.Content_DeploymentType_LogicalName))" -Log "Main.log" -TimeStamp
+        Write-Log -Message "Get-ContentFiles -Source $($Content.Content_Location) -Destination (Join-Path -Path $($WorkingFolder_Content) -ChildPath $($Content.Content_DeploymentType_LogicalName))" -Log "Main.log" 
         Get-ContentFiles -Source $Content.Content_Location -Destination (Join-Path -Path $WorkingFolder_Content -ChildPath $Content.Content_DeploymentType_LogicalName)
     }
     #EndRegion Downloading_Content
 
     #Region Create_Intunewin_Files
-    Write-Log -Message "--------------------------------------------" -Log "Main.log" -TimeStamp
+    Write-Log -Message "--------------------------------------------" -Log "Main.log" 
     Write-Log -Message "Creating .IntuneWin File(s)" -Log "Main.log"
     Write-Log -Message "--------------------------------------------" -Log "Main.log"
     Write-Host ''
@@ -787,7 +787,7 @@ If ($PackageApps) {
 
     #Get Application and Deployment Type Details and Files
     ForEach ($Application in $Applications_Array) {
-        Write-Log -Message "--------------------------------------------" -Log "Main.log" -TimeStamp
+        Write-Log -Message "--------------------------------------------" -Log "Main.log" 
         Write-Log -Message "$($Application.Application_Name)" -Log "Main.log"
         Write-Log -Message "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:" -Log "Main.log"
         Write-Log -Message "--------------------------------------------" -Log "Main.log"
@@ -800,7 +800,7 @@ If ($PackageApps) {
 
         ForEach ($Deployment in $DeploymentTypes_Array | Where-Object { $_.Application_LogicalName -eq $Application.Application_LogicalName }) {
             
-            Write-Log -Message "--------------------------------------------" -Log "Main.log" -TimeStamp
+            Write-Log -Message "--------------------------------------------" -Log "Main.log" 
             Write-Log -Message "$($Deployment.DeploymentType_Name)" -Log "Main.log"
             Write-Log -Message "--------------------------------------------" -Log "Main.log"
             Write-Host '--------------------------------------------' -ForegroundColor DarkGray
@@ -828,7 +828,7 @@ If ($PackageApps) {
                 Write-Log -Message "Intunewin Output Folder: ""$($OutputFolder)""" -Log "Main.log"
                 Write-Host "Intunewin Output Folder: ""$($OutputFolder)"""
                 Write-Host ''
-                Write-Log -Message "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -Log "Main.log" -TimeStamp
+                Write-Log -Message "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -Log "Main.log" 
                 Write-Host "Creating .Intunewin for ""$($Deployment.DeploymentType_Name)""..." -ForegroundColor Cyan
                 Write-Log -Message "`$IntuneWinFileCommand = New-IntuneWin -ContentFolder $($ContentFolder) -OutputFolder $($OutputFolder) -SetupFile $($SetupFile)" -Log "Main.log"
                 $IntuneWinFileCommand = New-IntuneWin -ContentFolder $ContentFolder -OutputFolder $OutputFolder -SetupFile $SetupFile
@@ -836,11 +836,11 @@ If ($PackageApps) {
                 Write-Host ''
                  
                 If (Test-Path (Join-Path -Path $OutputFolder -ChildPath "*.intunewin") ) {
-                    Write-Log -Message "Successfully created ""$($IntuneWinFile).intunewin"" at ""$($OutputFolder)""" -Log "Main.log" -TimeStamp
+                    Write-Log -Message "Successfully created ""$($IntuneWinFile).intunewin"" at ""$($OutputFolder)""" -Log "Main.log" 
                     Write-Host "Successfully created ""$($IntuneWinFile).intunewin"" at ""$($OutputFolder)""" -ForegroundColor Cyan
                 }
                 else {
-                    Write-Log -Message "Error: We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -Log "Main.log" -TimeStamp
+                    Write-Log -Message "Error: We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -Log "Main.log" 
                     Write-Host "Error: We couldn't verify that ""$($IntuneWinFile).intunewin"" was created at ""$($OutputFolder)""" -ForegroundColor Red
                 }
             }
@@ -849,7 +849,7 @@ If ($PackageApps) {
     #EndRegion Create_Intunewin_Files
 }
 else {
-    Write-Log -Message "The -PackageApps parameter was not passed. Application and Deployment Type information will be gathered only, content will not be downloaded" -Log "Main.log" -TimeStamp
+    Write-Log -Message "The -PackageApps parameter was not passed. Application and Deployment Type information will be gathered only, content will not be downloaded" -Log "Main.log" 
     Write-Host "The -PackageApps parameter was not passed. Application and Deployment Type information will be gathered only, content will not be downloaded" -ForegroundColor Magenta
 }
 #EndRegion Package_Apps
@@ -857,7 +857,7 @@ else {
 #Region Create_Apps
 #If the $CreateApps parameter was passed. Use the Win32Content Prep Tool to create Win32 Apps
 If ($CreateApps) {
-    Write-Log -Message "--------------------------------------------" -Log "Main.log" -TimeStamp
+    Write-Log -Message "--------------------------------------------" -Log "Main.log" 
     Write-Log -Message "Creating Win32 Apps" -Log "Main.log"
     Write-Log -Message "--------------------------------------------" -Log "Main.log"
     Write-Host ''
@@ -867,7 +867,7 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
-Set-Location $ScriptRoot
+#Set-Location $ScriptRoot
 Write-Host ''
-Write-Log -Message "## The Win32AppMigrationTool Script has Finished ##" -Log "Main.log" -TimeStamp
+Write-Log -Message "## The Win32AppMigrationTool Script has Finished ##" -Log "Main.log" 
 Write-Host '## The Win32AppMigrationTool Script has Finished ##'
