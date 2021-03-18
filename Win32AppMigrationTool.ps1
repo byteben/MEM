@@ -520,11 +520,17 @@ Function Get-AppInfo {
                 
             #If we have the logo, add the path
             If (!($Null -eq $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id)) {
-                If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
-                    Write-Log -Message "Application_IconPath -Value (Join-Path -Path $($WorkingFolder_Logos) -ChildPath (Join-Path -Path $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id) -ChildPath ""Logo.jpg""))" -Log "Main.log"
-                    $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
+                Try {
+                    If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
+                        Write-Log -Message "Application_IconPath -Value (Join-Path -Path $($WorkingFolder_Logos) -ChildPath (Join-Path -Path $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id) -ChildPath ""Logo.jpg""))" -Log "Main.log"
+                        $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
+                    }
+                    else {
+                        Write-Log -Message "Application_IconPath -Value `$Null" -Log "Main.log"
+                        $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value $Null
+                    }
                 }
-                else {
+                Catch {
                     Write-Log -Message "Application_IconPath -Value `$Null" -Log "Main.log"
                     $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value $Null
                 }
