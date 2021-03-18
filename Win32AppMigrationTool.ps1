@@ -435,6 +435,8 @@ Write-Host 'Script Start Win32AppMigrationTool' -ForegroundColor DarkGray
 Write-Host '--------------------------------------------' -ForegroundColor DarkGray
 Write-Host ''
 
+$ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
 #Connect to Site Server
 Write-Host 'Connecting to Site Server..' -ForegroundColor Cyan
 Connect-SiteServer -SiteCode  $SiteCode -ProviderMachineName $ProviderMachineName
@@ -688,5 +690,6 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
+Set-Location $ScriptRoot
 Write-Host ''
 Write-Host '## The Win32AppMigrationTool Script has Finished ##'
