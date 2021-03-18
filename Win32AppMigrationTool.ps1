@@ -7,7 +7,11 @@ Filename:     Win32AppMigrationTool.ps1
 The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Description
-Version 1.03.18.0 - 18/03/2021
+Version 1.03.18.03 - 18/03/2021
+## BETA ##
+- Fixed issue where Intunewin SetupFile was being detected as an .exe when msiexec was present in the install command
+
+Version 1.03.18.02 - 18/03/2021
 ## BETA ##
 - Removed " from SetupFile command if install commands are in double quotes
 
@@ -141,7 +145,7 @@ Function New-IntuneWin {
     else {
 
         #Search the Install Command line for other .exe installers
-        If ($SetupFile -match "`.exe") {
+        If (($SetupFile -match "`.exe") -and (!($SetupFile -match "msiexec"))) {
             $Installer = ".exe"
             Write-Log -Message "$($Installer) installer detected" -Log "Main.log" 
             Write-Host "$Installer installer detected"
