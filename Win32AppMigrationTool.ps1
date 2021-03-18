@@ -930,7 +930,7 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
-#Set-Location $ScriptRoot
+Set-Location $ScriptRoot
 Write-Host ''
 Write-Log -Message "## The Win32AppMigrationTool Script has Finished ##" -Log "Main.log" 
 Write-Host '## The Win32AppMigrationTool Script has Finished ##'
