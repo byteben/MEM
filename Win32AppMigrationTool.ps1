@@ -54,13 +54,16 @@ Pass this parameter to create the Win32apps in Intune
 .\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *" -ExportLogo -PackageApps -CreateApps
 
 #>
-
+[CmdletBinding()]
 Param (
     [Parameter(Mandatory = $True)]
     [String]$AppName,
-    [String]$SiteCode,
+    [Parameter(Mandatory = $True)]
     [String]$ProviderMachineName,
-    [Parameter(Mandatory = $False)]
+    [Parameter(Mandatory = $True)]
+    [ValidateLength(3,3)]
+    [String]$SiteCode,   
+    [Parameter()]
     [Switch]$ExportLogo,
     [String]$WorkingFolder = "C:\Win32AppMigrationTool",
     [Switch]$PackageApps,
@@ -488,7 +491,7 @@ Write-Host '--------------------------------------------' -ForegroundColor DarkG
 Write-Host ''
 
 #Get list of Applications
-$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $ApplicationName
+$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $ApplicationName -Title "Select an Application(s) to process the associated Deployment Types"
 
 If ($ApplicationName) {
     Write-Host "The Win32App Migration Tool will proces the following Applications:"
