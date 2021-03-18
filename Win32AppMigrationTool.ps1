@@ -133,7 +133,6 @@ Function New-IntuneWin {
         $Right = ($Right -Split " ")[-1]
         $Right = $Right.TrimStart("\", ".", "`"")
         $Command = $Right + ".ps1"
-        $Command -replace '"', ''
         Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
         Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
         Write-Log -Message "$($Command)" -Log "Main.log" 
@@ -148,6 +147,7 @@ Function New-IntuneWin {
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.exe")[0]
             $Right = ($Right -Split " ")[-1]
+            $Right = $Right.TrimStart("\", ".", "`"")
             $Command = $Right + $Installer
             $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
@@ -161,6 +161,7 @@ Function New-IntuneWin {
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.msi")[0]
             $Right = ($Right -Split " ")[-1]
+            $Right = $Right.TrimStart("\", ".", "`"")
             $Command = $Right + $Installer
             $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
@@ -174,6 +175,7 @@ Function New-IntuneWin {
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.cmd")[0]
             $Right = ($Right -Split " ")[-1]
+            $Right = $Right.TrimStart("\", ".", "`"")
             $Command = $Right + $Installer
             $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
@@ -187,6 +189,7 @@ Function New-IntuneWin {
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.bat")[0]
             $Right = ($Right -Split " ")[-1]
+            $Right = $Right.TrimStart("\", ".", "`"")
             $Command = $Right + $Installer
             $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
@@ -517,7 +520,7 @@ Function Get-AppInfo {
                 
             #If we have the logo, add the path
             If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
-                Write-Log -Message "Application_IconPath -Value (Join-Path -Path $($WorkingFolder_Logos) -ChildPath (Join-Path -Path $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id) -ChildPath "Logo.jpg"))" -Log "Main.log"
+                Write-Log -Message "Application_IconPath -Value (Join-Path -Path $($WorkingFolder_Logos) -ChildPath (Join-Path -Path $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id) -ChildPath ""Logo.jpg""))" -Log "Main.log"
                 $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
             }
             else {
