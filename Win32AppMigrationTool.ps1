@@ -112,6 +112,7 @@ Function New-IntuneWin {
     <#
     Function to create new Intunewin
     #>
+    Write-Log -Message "Function: New-IntuneWin was called" -Log "Main.log" -TimeStamp
 
     #If PowerShell is reference, grab the name of the .ps1 referenced in the Install Command line
     If ($SetupFile -match "powershell" -and $SetupFile -match "\.ps1") {
@@ -211,6 +212,7 @@ Function Get-ContentFiles {
     <#
     Function to download Deployment Type Content from Content Source Folder
     #>
+    Write-Log -Message "Function: Get-ContentFiles was called" -Log "Main.log" -TimeStamp
 
     Try {
         $Robo = Robocopy.exe $Source $Destination /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
@@ -232,90 +234,113 @@ Function Connect-SiteServer {
     <#
     Function to connect to ConfigMgr
     #>
+    Write-Log -Message "Function: Connect-SiteServer was called" -Log "Main.log" -TimeStamp
 
     # Import the ConfigurationManager.psd1 module 
     Try {
         If ($Null -eq (Get-Module ConfigurationManager)) {
+            Write-Log -Message "Import-Module $($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1" -Log "Main.log"
             Import-Module "$($ENV:SMS_ADMIN_UI_PATH)\..\ConfigurationManager.psd1"
         }
     }
     Catch {
+        Write-Log -Message "Warning: Could not import the ConfigurationManager.psd1 Module" -Log "Main.log"
         Write-Host 'Warning: Could not import the ConfigurationManager.psd1 Module' -ForegroundColor Red
     }
 
     # Connect to the site's drive if it is not already present
     Try {
         if ($Null -eq (Get-PSDrive -Name $SiteCode -PSProvider CMSite -ErrorAction SilentlyContinue)) {
+            Write-Log -Message "New-PSDrive -Name $($SiteCode) -PSProvider CMSite -Root $($ProviderMachineName)" -Log "Main.log"
             New-PSDrive -Name $SiteCode -PSProvider CMSite -Root $ProviderMachineName
         }
         #Set the current location to be the site code.
+        Write-Log -Message "Set-Location $($SiteCode):\" -Log "Main.log"
         Set-Location "$($SiteCode):\"
+        Write-Log -Message "Connected to provider $($ProviderMachineName) at site $($SiteCode)" -Log "Main.log" -TimeStamp
         Write-Host "Connected to provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Green
     }
     Catch {
+        Write-Log -Message "Warning: Could not connect to the specified provider $($ProviderMachineName) at site $($SiteCode)" -Log "Main.log"
         Write-Host "Warning: Could not connect to the specified provider ""$($ProviderMachineName)"" at site ""$($SiteCode)""" -ForegroundColor Red
     }
     
 }
 
 Function New-FolderToCreate {
-    <#
-    Function to create folder structure for Win32AppMigrationTool
-    #>  
     Param(
         [String]$Root,
         [String[]]$Folders
     )
+    <#
+    Function to create folder structure for Win32AppMigrationTool
+    #>  
+
+    Write-Log -Message "Function: New-FolderToCreate was called" -Log "Main.log" -TimeStamp
+    
     If (!($Root)) {
+        Write-Log -Message "Error: No Root Folder passed to Function" -Log "Main.log"
         Write-Host "Error: No Root Folder passed to Function" -ForegroundColor Red
     }
     If (!($Folders)) {
+        Write-Log -Message "Error: No Folder(s) passed to Function" -Log "Main.log"
         Write-Host "Error: No Folder(s) passed to Function" -ForegroundColor Red
     }
 
     ForEach ($Folder in $Folders) {
         #Create Folders
+        Write-Log -Message "`$FolderToCreate = Join-Path -Path $($Root) -ChildPath $($Folder)" -Log "Main.log"
         $FolderToCreate = Join-Path -Path $Root -ChildPath $Folder
         If (!(Test-Path $FolderToCreate)) {
             Write-Host "Creating Folder ""$($FolderToCreate)""..." -ForegroundColor Cyan
             Try {
                 New-Item -Path $FolderToCreate -ItemType Directory -Force -ErrorAction Stop | Out-Null
+                Write-Log -Message "Folder ""$($FolderToCreate)"" created succesfully" -Log "Main.log"
                 Write-Host "Folder ""$($FolderToCreate)"" created succesfully"
             }
             Catch {
+                Write-Log -Message "Warning: Couldn't create ""$($FolderToCreate)"" folder" -Log "Main.log"
                 Write-Host "Warning: Couldn't create ""$($FolderToCreate)"" folder" -ForegroundColor Red
             }
         }
         else {
+            Write-Log -Message "Information: Folder ""$($FolderToCreate)"" already exsts. Skipping folder creation" -Log "Main.log"
             Write-Host "Information: Folder ""$($FolderToCreate)"" already exsts. Skipping folder creation" -ForegroundColor Magenta
         }
     }
 }  
 
 Function Export-Logo {
-    <#
-    Function to decode and export Base64 image for application logo to an output folder
-    #>
+
     Param (
         [String]$IconId,
         [String]$AppName
     )
+    <#
+    Function to decode and export Base64 image for application logo to an output folder
+    #>
+
+    Write-Log -Message "Function: Export-Logo was called" -Log "Main.log" -TimeStamp
     Write-Host "Preparing to export Application Logo for ""$($AppName)"""
     If ($IconId) {
 
         #Check destination folder exists for logo
         If (!(Test-Path $WorkingFolder_Logos)) {
             Try {
+                Write-Log -Message "New-Item -Path $($WorkingFolder_Logos) -ItemType Directory -Force -ErrorAction Stop | Out-Null" -Log "Main.log"
                 New-Item -Path $WorkingFolder_Logos -ItemType Directory -Force -ErrorAction Stop | Out-Null
             }
             Catch {
+                Write-Log -Message "Warning: Couldn't create ""$($WorkingFolder_Logos)"" folder for Application Logos" -Log "Main.log"
                 Write-Host "Warning: Couldn't create ""$($WorkingFolder_Logos)"" folder for Application Logos" -ForegroundColor Red
             }
         }
 
         #Continue if Logofolder exists
         If (Test-Path $WorkingFolder_Logos) {
+            Write-Log -Message "`$LogoFolder_Id = (Join-Path -Path $($WorkingFolder_Logos) -ChildPath $($IconId))" -Log "Main.log"
             $LogoFolder_Id = (Join-Path -Path $WorkingFolder_Logos -ChildPath $IconId)
+            Write-Log -Message "`$Logo_File = (Join-Path -Path $($LogoFolder_Id) -ChildPath Logo.jpg)" -Log "Main.log"
             $Logo_File = (Join-Path -Path $LogoFolder_Id -ChildPath Logo.jpg)
 
             #Continue if logo does not already exist in destination folder
@@ -323,10 +348,12 @@ Function Export-Logo {
 
                 If (!(Test-Path $LogoFolder_Id)) {
                     Try {
+                        Write-Log -Message "New-Item -Path $($LogoFolder_Id) -ItemType Directory -Force -ErrorAction Stop | Out-Null" -Log "Main.log" -TimeStamp
                         New-Item -Path $LogoFolder_Id -ItemType Directory -Force -ErrorAction Stop | Out-Null
                     }
                     Catch {
-                        Write-Host "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo " -ForegroundColor Red
+                        Write-Log -Message "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo" -Log "Main.log" -TimeStamp
+                        Write-Host "Warning: Couldn't create ""$($LogoFolder_Id)"" folder for Application Logo" -ForegroundColor Red
                     }
                 }
 
@@ -334,6 +361,7 @@ Function Export-Logo {
                 If (Test-Path $LogoFolder_Id) {
                     Try {
                         #Grab the SDMPackgeXML which contains the Application and Deployment Type details
+                        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name $($AppName) | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" -TimeStamp
                         $XMLPackage = Get-CMApplication -Name $AppName | Where-Object { $Null -ne $_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML
 
                         #Deserialize SDMPackageXML
@@ -343,33 +371,39 @@ Function Export-Logo {
                         $Logo = [Convert]::FromBase64String($Raw)
                         [System.IO.File]::WriteAllBytes($Logo_File, $Logo)
                         If (Test-Path $Logo_File) {
+                            Write-Log -Message "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -Log "Main.log" -TimeStamp
                             Write-Host "Success: Application logo for ""$($AppName)"" exported successfully to ""$($Logo_File)""" -ForegroundColor Green
                         }
                     }
                     Catch {
+                        Write-Log -Message "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -Log "Main.log" -TimeStamp
                         Write-Host "Warning: Could not export Logo to folder ""$($LogoFolder_Id)""" -ForegroundColor Red
                     }
                 }
             }
             else {
+                Write-Log -Message "Information: Did not export Logo for ""$($AppName)"" to ""$($Logo_File)"" because the file already exists" -Log "Main.log"
                 Write-Host "Information: Did not export Logo for ""$($AppName)"" to ""$($Logo_File)"" because the file already exists" -ForegroundColor Magenta
             }
         }
     }
     else {
+        Write-Log -Message "Warning: Null or invalid IconId passed to function. Could not export Logo" -Log "Main.log" -TimeStamp
         Write-Host "Warning: Null or invalid IconId passed to function. Could not export Logo" -ForegroundColor Red
     }
 }
 
 Function Get-FileFromInternet {
-    <#
-    Function to download and extract ContentPrep Tool
-    #>
     Param (
         [String]$URI,
         [String]$Destination
     )
-    
+    <#
+    Function to download and extract ContentPrep Tool
+    #>
+
+    Write-Log -Message "Function: Get-FileFromInternet was called" -Log "Main.log" -TimeStamp
+
     $File = $URI -replace '.*/'
     $FileDestination = Join-Path -Path $Destination -ChildPath $File
     Try {
@@ -387,6 +421,7 @@ Function Get-AppInfo {
     Param (
         [String[]]$ApplicationName
     )
+    Write-Log -Message "Function: Get-AppInfo was called" -Log "Main.log" -TimeStamp
 
     #Create Array to display Application and Deployment Type Information
     $DeploymentTypes = @()
@@ -397,32 +432,44 @@ Function Get-AppInfo {
     ForEach ($Application in $ApplicationName) {
 
         #Grab the SDMPackgeXML which contains the Application and Deployment Type details
+        Write-Log -Message "`$XMLPackage = Get-CMApplication -Name $($Application) | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" -TimeStamp
         $XMLPackage = Get-CMApplication -Name $Application | Where-Object { $Null -ne $_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML
 
         #Deserialize SDMPackageXML
         $XMLContent = [xml]($XMLPackage)
 
         #Get total number of Deployment Types for the Application
+        Write-Log -Message "`$TotalDeploymentTypes = $($XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count)" -Log "Main.log"
         $TotalDeploymentTypes = $XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count
 
         If ($TotalDeploymentTypes -gt 1) {
 
             $ApplicationObject = New-Object PSCustomObject
+            Write-Log -Message "ApplicationObject():" -Log "Main.log"
                 
             #Application Details
+            Write-Log -Message "Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
+            Write-Log -Message "Application_Name -Value $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_Name -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Title
+            Write-Log -Message "Application_Description -Value $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Description)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_Description -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Description
+            Write-Log -Message "Application_Publisher -Value $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Publisher)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_Publisher -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Publisher
+            Write-Log -Message "Application_Version -Value $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Version)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_Version -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Version
+            Write-Log -Message "Application_IconId -Value $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_IconId -Value $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id
+            Write-Log -Message "Application_TotalDeploymentTypes -Value $($TotalDeploymentTypes)" -Log "Main.log"
             $ApplicationObject | Add-Member NoteProperty -Name Application_TotalDeploymentTypes -Value $TotalDeploymentTypes
                 
             #If we have the logo, add the path
             If (Test-Path -Path (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))) {
+                Write-Log -Message "Application_IconPath -Value (Join-Path -Path $($WorkingFolder_Logos) -ChildPath (Join-Path -Path $($XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id) -ChildPath "Logo.jpg"))" -Log "Main.log"
                 $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value (Join-Path -Path $WorkingFolder_Logos -ChildPath (Join-Path -Path $XMLContent.AppMgmtDigest.Application.DisplayInfo.Info.Icon.Id -ChildPath "Logo.jpg"))
             }
             else {
+                Write-Log -Message "Application_IconPath -Value `$Null" -Log "Main.log"
                 $ApplicationObject | Add-Member NoteProperty -Name Application_IconPath -Value $Null
             }
             $ApplicationTypes += $ApplicationObject
@@ -433,25 +480,41 @@ Function Get-AppInfo {
                 #Create new custom PSObjects to build line detail
                 $DeploymentObject = New-Object -TypeName PSCustomObject
                 $ContentObject = New-Object -TypeName PSCustomObject
-                
+                Write-Log -Message "DeploymentObject():" -Log "Main.log"
+
                 #DeploymentType Details
+                Write-Log -Message "Application_LogicalName -Value $($XMLContent.AppMgmtDigest.Application.LogicalName)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name Application_LogicalName -Value $XMLContent.AppMgmtDigest.Application.LogicalName
+                Write-Log -Message "DeploymentType_LogicalName -Value $($Object.LogicalName)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_LogicalName -Value $Object.LogicalName
+                Write-Log -Message "DeploymentType_Name -Value $($Object.Title.InnerText)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Name -Value $Object.Title.InnerText
+                Write-Log -Message "DeploymentType_Technology -Value $($Object.Installer.Technology)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_Technology -Value $Object.Installer.Technology
+                Write-Log -Message "DeploymentType_ExecutionContext -Value $($Object.Installer.ExecutionContext)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecutionContext -Value $Object.Installer.ExecutionContext
+                Write-Log -Message "DeploymentType_InstallContent -Value $($Object.Installer.CustomData.InstallContent.ContentId)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallContent -Value $Object.Installer.CustomData.InstallContent.ContentId
+                Write-Log -Message "DeploymentType_InstallCommandLine -Value $($Object.Installer.CustomData.InstallCommandLine)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_InstallCommandLine -Value $Object.Installer.CustomData.InstallCommandLine
+                Write-Log -Message "DeploymentType_UnInstallSetting -Value $($Object.Installer.CustomData.UnInstallSetting)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UnInstallSetting -Value $Object.Installer.CustomData.UnInstallSetting
+                Write-Log -Message "DeploymentType_UninstallContent -Value $$($Object.Installer.CustomData.UninstallContent.ContentId)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallContent -Value $Object.Installer.CustomData.UninstallContent.ContentId
+                Write-Log -Message "DeploymentType_UninstallCommandLine -Value $($Object.Installer.CustomData.UninstallCommandLine)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_UninstallCommandLine -Value $Object.Installer.CustomData.UninstallCommandLine
+                Write-Log -Message "DeploymentType_ExecuteTime -Value $($Object.Installer.CustomData.ExecuteTime)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_ExecuteTime -Value $Object.Installer.CustomData.ExecuteTime
+                Write-Log -Message "DeploymentType_MaxExecuteTime -Value $($Object.Installer.CustomData.MaxExecuteTime)" -Log "Main.log"
                 $DeploymentObject | Add-Member NoteProperty -Name DeploymentType_MaxExecuteTime -Value $Object.Installer.CustomData.MaxExecuteTime
 
                 $DeploymentTypes += $DeploymentObject
 
                 #Content Details
+                Write-Log -Message "ContentObject():" -Log "Main.log"
+                Write-Log -Message "Content_DeploymentType_LogicalName -Value $($Object.LogicalName)" -Log "Main.log"
                 $ContentObject | Add-Member NoteProperty -Name Content_DeploymentType_LogicalName -Value $Object.LogicalName
+                Write-Log -Message "Content_Location -Value $($Object.Installer.Contents.Content.Location)" -Log "Main.log"
                 $ContentObject | Add-Member NoteProperty -Name Content_Location -Value $Object.Installer.Contents.Content.Location
 
                 $Content += $ContentObject                
@@ -463,6 +526,7 @@ Function Get-AppInfo {
 
 #Clear Logs if -ResetLog Parameter was passed
 If ($ResetLog) {
+    Write-Log -Message "The -ResetLog Parameter was passed to the script" -Log "Main.log"
     Get-ChildItem -Path $WorkingFolder_Logs | Remove-Item
 }
 
