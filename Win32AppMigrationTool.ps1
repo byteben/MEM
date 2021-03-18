@@ -7,11 +7,15 @@ Filename:     Win32AppMigrationTool.ps1
 The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Description
+Version 1.03.18.0 - 18/03/2021
+## BETA ##
+- Removed " from SetupFile command if install commands are in double quotes
+
 Version 1.03.18.01 - 18/03/2021
 ## BETA ##
-- Bugs Fixed
 - Robocopy for content now padding Source and Destination variables if content path has white space
 - Deployment Type Count was failing from the SDMPackageXML. Using the measure tool to check if Deployment Types exist for an Application
+- Removed " from SetupFile command if install commands are in double quotes
 
 Version 1.03.18 - 18/03/2021
 ## BETA Release for Testing ##
@@ -129,6 +133,7 @@ Function New-IntuneWin {
         $Right = ($Right -Split " ")[-1]
         $Right = $Right.TrimStart("\", ".", "`"")
         $Command = $Right + ".ps1"
+        $Command -replace '"', ''
         Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
         Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
         Write-Log -Message "$($Command)" -Log "Main.log" 
@@ -144,6 +149,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.exe")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Log -Message "$($Command)" -Log "Main.log" 
@@ -156,6 +162,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.msi")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Log -Message "$($Command)" -Log "Main.log" 
@@ -168,6 +175,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.cmd")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Log -Message "$($Command)" -Log "Main.log" 
@@ -180,6 +188,7 @@ Function New-IntuneWin {
             $Right = ($SetupFile -split "\.bat")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            $Command -replace '"', ''
             Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
             Write-Log -Message "$($Command)" -Log "Main.log" 
