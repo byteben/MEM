@@ -7,6 +7,12 @@ Filename:     Win32AppMigrationTool.ps1
 The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Description
+Version 1.03.18.01 - 18/03/2021
+## BETA ##
+- Bugs Fixed
+- Robocopy for content now padding Source and Destination variables if content path has white space
+- Deployment Type Count was failing from the SDMPackageXML. Using the measure tool to check if Deployment Types exist for an Application
+
 Version 1.03.18 - 18/03/2021
 ## BETA Release for Testing ##
 -Logging Added
@@ -116,13 +122,16 @@ Function New-IntuneWin {
 
     #If PowerShell is reference, grab the name of the .ps1 referenced in the Install Command line
     If ($SetupFile -match "powershell" -and $SetupFile -match "\.ps1") {
+        Write-Log -Message "Powershell script detected" -Log "Main.log" 
         Write-Host "Powershell script detected" -ForegroundColor Yellow
         Write-Host ''
         $Right = ($SetupFile -split ".ps1")[0]
         $Right = ($Right -Split " ")[-1]
         $Right = $Right.TrimStart("\", ".", "`"")
         $Command = $Right + ".ps1"
+        Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
         Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
+        Write-Log -Message "$($Command)" -Log "Main.log" 
         Write-Host $Command -ForegroundColor Green
     }
     else {
@@ -130,38 +139,50 @@ Function New-IntuneWin {
         #Search the Install Command line for other .exe installers
         If ($SetupFile -match "`.exe") {
             $Installer = ".exe"
+            Write-Log -Message "$($Installer) installer detected" -Log "Main.log" 
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.exe")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
+            Write-Log -Message "$($Command)" -Log "Main.log" 
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.msi") {
             $Installer = ".msi"
+            Write-Log -Message "$($Installer) installer detected" -Log "Main.log" 
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.msi")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
+            Write-Log -Message "$($Command)" -Log "Main.log" 
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.cmd") {
             $Installer = ".cmd"
+            Write-Log -Message "$($Installer) installer detected" -Log "Main.log" 
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.cmd")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
+            Write-Log -Message "$($Command)" -Log "Main.log" 
             Write-Host $Command -ForegroundColor Green
         }
         elseif ($SetupFile -match "`.bat") {
             $Installer = ".bat"
+            Write-Log -Message "$($Installer) installer detected" -Log "Main.log" 
             Write-Host "$Installer installer detected"
             $Right = ($SetupFile -split "\.bat")[0]
             $Right = ($Right -Split " ")[-1]
             $Command = $Right + $Installer
+            Write-Log -Message "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -Log "Main.log" 
             Write-Host "Extracting the SetupFile Name for the Microsoft Win32 Content Prep Tool from the Install Command..." -ForegroundColor Cyan
+            Write-Log -Message "$($Command)" -Log "Main.log" 
             Write-Host $Command -ForegroundColor Green
         }
     }
@@ -169,16 +190,22 @@ Function New-IntuneWin {
 
     Try {
         #Check IntuneWinAppUtil.exe
+        Write-Log -Message "Re-checking presence of Win32 Content Prep Tool..." -Log "Main.log" 
         Write-Host "Re-checking presence of Win32 Content Prep Tool..." -ForegroundColor Cyan
         If (Test-Path (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe")) {
+            Write-Log -Message "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -Log "Main.log" 
             Write-Host "Information: IntuneWinAppUtil.exe already exists at ""$($WorkingFolder_ContentPrepTool)"". Skipping download" -ForegroundColor Magenta
         }
         else {
+            Write-Log -Message "Downloading Win32 Content Prep Tool..." -Log "Main.log" 
             Write-Host "Downloading Win32 Content Prep Tool..." -ForegroundColor Cyan
+            Write-Log -Message "Get-FileFromInternet -URI ""https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe"" -Destination $($WorkingFolder_ContentPrepTool)" -Log "Main.log" 
             Get-FileFromInternet -URI "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw/master/IntuneWinAppUtil.exe" -Destination $WorkingFolder_ContentPrepTool
         }
         Write-Host ''
+        Write-Log -Message "Building IntuneWinAppUtil.exe execution string..." -Log "Main.log" 
         Write-Host "Building IntuneWinAppUtil.exe execution string..." -ForegroundColor Cyan
+        Write-Log -Message """$($WorkingFolder_ContentPrepTool)\IntuneWinAppUtil.exe"" -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -Log "Main.log" 
         Write-Host """$($WorkingFolder_ContentPrepTool)\IntuneWinAppUtil.exe"" -s ""$($Command)"" -c ""$($ContentFolder)"" -o ""$($OutputFolder)""" -ForegroundColor Green
 
         #Try running the content prep tool to build the intunewin
@@ -192,15 +219,20 @@ Function New-IntuneWin {
                 $OutputFolder
                 "-q"
             )
+            Write-Log -Message "Start-Process -FilePath (Join-Path -Path $($WorkingFolder_ContentPrepTool) -ChildPath ""IntuneWinAppUtil.exe"") -ArgumentList $($Arguments) -Wait" -Log "Main.log" 
             Start-Process -FilePath (Join-Path -Path $WorkingFolder_ContentPrepTool -ChildPath "IntuneWinAppUtil.exe") -ArgumentList $Arguments -Wait
+            Write-Log -Message "Function Return: $($Right)" -Log "Main.log"
             Return $Right
         }
         Catch {
+            Write-Log -Message "Error creating the .intunewin file" -Log "Main.log"
             Write-Host "Error creating the .intunewin file" -ForegroundColor Red
+            Write-Log -Message "$($_)" -Log "Main.log"
             Write-Host $_ -ForegroundColor Red
         }
     }
     Catch {
+        Write-Log -Message "The script encounted an error getting the Win32 Content Prep Tool" -Log "Main.log"
         Write-Host "The script encounted an error getting the Win32 Content Prep Tool" -ForegroundColor Red
     }
 }
@@ -213,17 +245,27 @@ Function Get-ContentFiles {
     Function to download Deployment Type Content from Content Source Folder
     #>
     Write-Log -Message "Function: Get-ContentFiles was called" -Log "Main.log" 
+    Write-Log -Message "Padding $($Source) in case content path has spaces. Robocopy demand space at end of Source String" -Log "Main.log" 
+    $SourcePadded = "`"" + $Source + " `""
+    Write-Log -Message "Padding $($Destination) in case content path has spaces. Robocopy demand space at end of Destination String" -Log "Main.log" 
+    $DestinationPadded = "`"" + $Destination + " `""
 
     Try {
-        $Robo = Robocopy.exe $Source $Destination /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np
-        $Robo 
-        Return $Done
-    }
+        Write-Log -Message "`$Log = Join-Path -Path $($WorkingFolder_Logs) -ChildPath ""Main.Log""" -Log "Main.log" 
+        $Log = Join-Path -Path $WorkingFolder_Logs -ChildPath "Main.Log"
+        Write-Log -Message "Robocopy.exe $($SourcePadded) $($DestinationPadded) /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np /v /eta /UNILOG+:$($Log)" -Log "Main.log" 
+        $Robo = Robocopy.exe $SourcePadded $DestinationPadded /mir /e /z /r:5 /w:1 /v /NDL /NJH /NJS /nc /ns /np /v /eta /UNILOG+:$Log
+        $Robo
 
+        If ((Get-ChildItem -Path $Destination | Measure-Object).Count -eq 0 ) {
+            Write-Log -Message "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)""" -Log "Main.log" 
+            Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)""" -ForegroundColor Red
+        }
+    }
     Catch {
-        Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)"""
+        Write-Log -Message "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)""" -Log "Main.log" 
+        Write-Host "Error: Could not transfer content from ""$($Source)"" to ""$($Destination)""" -ForegroundColor Red
     }
-
 }
 
 Function Connect-SiteServer {
@@ -418,6 +460,7 @@ Function Get-AppInfo {
     Param (
         [String[]]$ApplicationName
     )
+ 
     <#
     Function to get deployment type(s) for applcation(s) passed
     #>
@@ -435,14 +478,14 @@ Function Get-AppInfo {
         Write-Log -Message "`$XMLPackage = Get-CMApplication -Name ""$($Application)"" | Where-Object { `$Null -ne `$_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML" -Log "Main.log" 
         $XMLPackage = Get-CMApplication -Name $Application | Where-Object { $Null -ne $_.SDMPackageXML } | Select-Object -ExpandProperty SDMPackageXML
         
-        #Deserialize SDMPackageXML
+        #Prepare XML from SDMPackageXML
         $XMLContent = [xml]($XMLPackage)
-        
-        #Get total number of Deployment Types for the Application
-        Write-Log -Message "`$TotalDeploymentTypes = $($XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count)" -Log "Main.log"
-        $TotalDeploymentTypes = $XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType.Count
 
-        If ($TotalDeploymentTypes -gt 1) {
+        #Get total number of Deployment Types for the Application
+        Write-Log -Message "`$TotalDeploymentTypes = ($($XMLContent).AppMgmtDigest.Application.DeploymentTypes.DeploymentType | Measure-Object | Select-Object -ExpandProperty Count)" -Log "Main.log"
+        $TotalDeploymentTypes = ($XMLContent.AppMgmtDigest.Application.DeploymentTypes.DeploymentType | Measure-Object | Select-Object -ExpandProperty Count)
+        
+        If (!($Null -eq $TotalDeploymentTypes) -or (!($TotalDeploymentTypes -eq 0))) {
 
             $ApplicationObject = New-Object PSCustomObject
             Write-Log -Message "ApplicationObject():" -Log "Main.log"
@@ -520,6 +563,10 @@ Function Get-AppInfo {
                 $Content += $ContentObject                
             }
         }
+        else {
+            Write-Log -Message "Warning: No DeploymentTypes found for ""$($XMLContent.AppMgmtDigest.Application.LogicalName)""" -Log "Main.log"
+            Write-Host "Warning: No DeploymentTypes found for ""$($XMLContent.AppMgmtDigest.Application.LogicalName)"" " -ForegroundColor Yellow
+        }
     } 
     Return $DeploymentTypes, $ApplicationTypes, $Content
 }
@@ -527,7 +574,14 @@ Function Get-AppInfo {
 #Clear Logs if -ResetLog Parameter was passed
 If ($ResetLog) {
     Write-Log -Message "The -ResetLog Parameter was passed to the script" -Log "Main.log"
-    Get-ChildItem -Path $WorkingFolder_Logs | Remove-Item
+    Try {
+        Write-Log -Message "Get-ChildItem -Path $($WorkingFolder_Logs) | Remove-Item -Force" -Log "Main.log"
+        Get-ChildItem -Path $WorkingFolder_Logs | Remove-Item -Force
+    }
+    Catch {
+        Write-Log -Message "Error: Unable to delete log files at $($WorkingFolder_Logs). Do you have it open?" -Log "Main.log"
+        Write-Host "Error: Unable to delete log files at $($WorkingFolder_Logs). Do you have it open?" -ForegroundColor Red
+    }
 }
 
 Write-Log -Message "--------------------------------------------" -Log "Main.log"
@@ -603,7 +657,7 @@ Write-Host ''
 
 #Get list of Applications
 Write-Log -Message "Get-CMApplication -Fast | Where-Object { $($_.LocalizedDisplayName) -like $($AppName) } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $($ApplicationName) -Title ""Select an Application(s) to process the associated Deployment Types""" -Log "Main.log" 
-$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like $AppName } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -PassThru -OutVariable $ApplicationName -Title "Select an Application(s) to process the associated Deployment Types"
+$ApplicationName = Get-CMApplication -Fast | Where-Object { $_.LocalizedDisplayName -like "$AppName" } | Select-Object -ExpandProperty LocalizedDisplayName | Sort-Object | Out-GridView -Passthru -Title "Select an Application(s) to process the associated Deployment Types"
 
 If ($ApplicationName) {
     Write-Log -Message "The Win32App Migration Tool will process the following Applications:" -Log "Main.log"
@@ -618,7 +672,7 @@ If ($ApplicationName) {
 #Region Export_Details_CSV
 Write-Log -Message "Calling function to grab deployment type detail for application(s)" -Log "Main.log" 
 #Calling function to grab deployment type detail for application(s)
-Write-Log -Message "`$App_Array = Get-AppInfo -ApplicationName $($ApplicationName)" -Log "Main.log"
+Write-Log -Message "`$App_Array = Get-AppInfo -ApplicationName ""$($ApplicationName)""" -Log "Main.log"
 $App_Array = Get-AppInfo -ApplicationName $ApplicationName
 $DeploymentTypes_Array = $App_Array[0]
 $Applications_Array = $App_Array[1]
@@ -789,12 +843,12 @@ If ($PackageApps) {
     ForEach ($Application in $Applications_Array) {
         Write-Log -Message "--------------------------------------------" -Log "Main.log" 
         Write-Log -Message "$($Application.Application_Name)" -Log "Main.log"
-        Write-Log -Message "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:" -Log "Main.log"
+        Write-Log -Message "There are a total of $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:" -Log "Main.log"
         Write-Log -Message "--------------------------------------------" -Log "Main.log"
         Write-Host ''
         Write-Host '--------------------------------------------' -ForegroundColor DarkGray
         Write-Host """$($Application.Application_Name)""" -ForegroundColor Green
-        Write-Host "There are $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:"
+        Write-Host "There are a total of $($Application.Application_TotalDeploymentTypes) Deployment Types for this Application:"
         Write-Host '--------------------------------------------' -ForegroundColor DarkGray
         Write-Host ''
 
