@@ -272,8 +272,8 @@ Function Get-ContentFiles {
     Try {
         Write-Log -Message "`$Log = Join-Path -Path $($WorkingFolder_Logs) -ChildPath ""Main.Log""" -Log "Main.log" 
         $Log = Join-Path -Path $WorkingFolder_Logs -ChildPath "Main.Log"
-        Write-Log -Message "Robocopy.exe $($SourcePadded) $($DestinationPadded) /mir /e /z /r:5 /w:1 /reg /v /NDL /NJH /NJS /nc /ns /np /v /eta /UNILOG+:$($Log)" -Log "Main.log" 
-        $Robo = Robocopy.exe $SourcePadded $DestinationPadded /mir /e /z /r:5 /w:1 /v /NDL /NJH /NJS /nc /ns /np /v /eta /UNILOG+:$Log
+        Write-Log -Message "Robocopy.exe $($SourcePadded) $($DestinationPadded) /MIR /E /Z /R:5 /W:1 /NDL /NJH /NJS /NC /NS /NP /V /TEE  /UNILOG+:$($Log)" -Log "Main.log" 
+        $Robo = Robocopy.exe $SourcePadded $DestinationPadded /MIR /E /Z /R:5 /W:1 /NDL /NJH /NJS /NC /NS /NP /V /TEE /UNILOG+:$Log
         $Robo
 
         If ((Get-ChildItem -Path $Destination | Measure-Object).Count -eq 0 ) {
