@@ -7,6 +7,10 @@ Filename:     Win32AppMigrationTool.ps1
 The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center
 
 .Description
+Version 1.03.19.01 - 19/03/2021
+## BETA ##
+- Added Function Get-ScriptEnd
+
 Version 1.03.18.03 - 18/03/2021
 ## BETA ##
 - Fixed issue where Intunewin SetupFile was being detected as an .exe when msiexec was present in the install command
@@ -119,6 +123,17 @@ function Write-Log {
     $Output = (Get-Date -f g) + ": " + $Message
     $Output | Out-File -Encoding Ascii -Append (Join-Path -Path $WorkingFolder_Logs -ChildPath $Log)
 
+}
+
+Function Get-ScriptEnd {
+    <#
+    Function to end the Win32 App Migration Tool
+    #>
+
+    Set-Location $ScriptRoot
+    Write-Host ''
+    Write-Log -Message "## The Win32AppMigrationTool Script has Finished ##" -Log "Main.log" 
+    Write-Host '## The Win32AppMigrationTool Script has Finished ##'
 }
 Function New-IntuneWin {
     Param (
@@ -699,6 +714,12 @@ If ($ApplicationName) {
         Write-Host """$($Application)""" -ForegroundColor Green
     }
 }
+else {
+    Write-Log -Message "AppName ""$($AppName)"" could not be found." -Log "Main.log"
+    Write-Host "AppName ""$($AppName)"" could not be found. Please re-run the tool and try again. The AppName parameter does accept wildcards i.e. *" -ForegroundColor Red
+    Get-ScriptEnd
+    Exit 1
+}
 #EndRegion Display_Application_Results
 
 #Region Export_Details_CSV
@@ -953,7 +974,4 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
-Set-Location $ScriptRoot
-Write-Host ''
-Write-Log -Message "## The Win32AppMigrationTool Script has Finished ##" -Log "Main.log" 
-Write-Host '## The Win32AppMigrationTool Script has Finished ##'
+Get-ScriptExit
