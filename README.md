@@ -35,6 +35,8 @@
 - Option to build .Intunewin files without downloading the Deployment Type content locally
 - Gather Requirements, Detection Rules and Supercedence for Applications and Deployment Types
 - Create the Win32app in Intune 
+- Create PS Module  
+- Add to Gallery  
   
 # Synopsis  
   
