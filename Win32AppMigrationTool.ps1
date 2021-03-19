@@ -50,11 +50,14 @@ This is the working folder for the Win32AppMigration Tool. Care should be given 
 -Logs
 -Win32Apps
 
-.Parameter PackageApp
+.Parameter PackageApps
 Pass this parameter to package selected apps in the .intunewin format
 
 .Parameter CreateApps
 Pass this parameter to create the Win32apps in Intune
+
+.Parameter ResetLog
+Pass this parameter to reset the log file
 
 .Example
 .\Win32AppMigrationTool.ps1 -SiteCode "BB1" -ProviderMachineName "SCCM1.byteben.com" -AppName "Microsoft Edge Chromium *"
