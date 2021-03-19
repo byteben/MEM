@@ -25,10 +25,24 @@
 
 #### Version 1.0 - 14/03/2021 - DEV  
 - DEV Release  
+
+## Bugs  
+  
+- Still in BETA, there are a few
+  
+## Planned Improvements  
+  
+- Option to build .Intunewin files without downloading the Deployment Type content locally
+- Gather Requirements, Detection Rules and Supercedence for Applications and Deployment Types
+- Create the Win32app in Intune 
   
 # Synopsis  
   
-The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center.
+The Win32 App Migration Tool is designed to inventory ConfigMgr Applications and Deployment Types, build .intunewin files and create Win3Apps in The MEM Admin Center.  
+  
+Instead of manually checking Application and Deployment Type information and gathering content to build Win32apps, the Win32APp Migration Tool is designed to do that for you. To date, the Application and Deployment Type information is gathered and a .Intunewin file is created. We are also collecting the logo for the application.  
+  
+The Win32App Migration Tool is still in BETA so I would welcome any feedback or suggestions for improvement. Reach out on Twitter to DM @byteben (DM's are open)  
   
 ## Parameters  
   
