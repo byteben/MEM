@@ -974,4 +974,4 @@ If ($CreateApps) {
     Write-Host ''
 }
 #EndRegion Create_Apps
-Get-ScriptExit
+Get-ScriptEnd
