@@ -123,7 +123,8 @@ else {
             
             $URLHash = (Get-URLHashInfo -URLPath $URL).hash
             $FileHash = (Get-FileHashInfo -FilePath $FilePath).hash
-            Wite-Verbose "Checking Hash.."
+            Write-Verbose "Checking Hash.."
+            
             If (($URLHash -ne $FileHash) -or ([string]::IsNullOrWhitespace($URLHash)) -or ([string]::IsNullOrWhitespace($FileHash))) {
                 Write-Verbose "URL Hash = $($URLHash)"
                 Write-Verbose "File Hash = $($FileHash)"
