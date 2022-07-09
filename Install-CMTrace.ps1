@@ -13,6 +13,7 @@
     FileName:    Install-CMTrace.ps1
     Author:      Ben Whitmore
     Date:        9th July 2022
+    Thanks:      @PMPC colleague(s) for "Current user" identitity and role functions
     
 #>
 
