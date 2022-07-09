@@ -55,13 +55,29 @@ Function Get-FileHashInfo {
     return $FileHash
 }
 
+Function Get-CurrentUser {
+
+    #Get the current user
+    $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    Write-Verbose "Current User = $($CurrentUser.Name)"
+    return $CurrentUser
+}
+
 Function Test-IsRunningAsAdministrator {
 
-    #Get current user and return $tru if they are a local administrator
-    $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    #Get current user and return $true if they are a local administrator
+    $CurrentUser = Get-CurrentUser
     $IsAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     Write-Verbose "Current user is an administrator? $IsAdmin"
     return $IsAdmin
+}
+
+Function Test-IsRunningAsSystem {
+
+    #Get current user and return $true if it is SYSTEM
+    $RunningAsSystem = (Get-CurrentUser).User -eq 'S-1-5-18'
+    Write-Verbose "Running as system? $RunningAsSystem"
+    return $RunningAsSystem
 }
 
 Function Get-FileFromInternet {
@@ -74,6 +90,7 @@ Function Get-FileFromInternet {
         [String]$Destination
     )
 
+    #Test the URL is valid
     Try {
         $URLRequest = Invoke-WebRequest -UseBasicParsing -URI $URL -ErrorAction SilentlyContinue
         $StatusCode = $URLRequest.StatusCode
@@ -83,6 +100,7 @@ Function Get-FileFromInternet {
         $StatusCode = $_.Exception.Response.StatusCode.value__
     }
 
+    #If the URL is valid, attempt to download the file
     If ($StatusCode -eq 200) {
         Try {
             Invoke-WebRequest -UseBasicParsing -Uri $URL -OutFile $Destination -ErrorAction SilentlyContinue
@@ -107,8 +125,9 @@ Function Get-FileFromInternet {
     }
 }
 
-If (!(Test-IsRunningAsAdministrator)) {
-    Write-Verbose "The current User is not an administrator, please run this scrip with administrator credentials"
+#Continue if the user running the script is a local administrator or SYSTEM
+If ((!(Test-IsRunningAsAdministrator)) -and (!(Test-IsRunningAsSystem))) {
+    Write-Verbose "The current User is not an administrator or SYSTEM. Please run this script with administrator credentials or in the SYSTEM context"
 }
 else {
 
