@@ -131,22 +131,28 @@ If ((!(Test-IsRunningAsAdministrator)) -and (!(Test-IsRunningAsSystem))) {
 }
 else {
 
+    #Check the CLient Tools are not already installed
     If (-not(Test-Path -Path $InstallDest)) {
 
+        #Set Download destination full path
         $FilePath = (Join-Path -Path $DownloadDir -ChildPath $DownloadFileName)
 
+        #Download the MSI
         Get-FileFromInternet -URL $URL -Destination $FilePath
 
+        #Test if the download was successful
         If (-not (Test-Path -Path $FilePath)) {
             Write-Verbose "There was an error downloading the file to the file system. $($FilePath) does not exist."
             break
         }
         else {
             
+            #Check the hash from Microsoft matches the hash of the file saved to disk
             $URLHash = (Get-URLHashInfo -URLPath $URL).hash
             $FileHash = (Get-FileHashInfo -FilePath $FilePath).hash
             Write-Verbose "Checking Hash.."
 
+            #Warn if the hash is different
             If (($URLHash -ne $FileHash) -or ([string]::IsNullOrWhitespace($URLHash)) -or ([string]::IsNullOrWhitespace($FileHash))) {
                 Write-Verbose "URL Hash = $($URLHash)"
                 Write-Verbose "File Hash = $($FileHash)"
@@ -156,6 +162,8 @@ else {
             else {
                 Write-Verbose "Hash match confirmed. Continue installation.."
                 Try {
+
+                    #Attempt to install the MSI
                     $MSIArgs = @(
                         "/i"
                         $FilePath
@@ -163,6 +171,8 @@ else {
                         "/qn"
                     )
                     Start-Process "$env:SystemRoot\System32\msiexec.exe" -args $MSIArgs -Wait -NoNewWindow
+
+                    #Check the installation was successful
                     If (Test-Path -Path $InstallDest) {
                         Write-Verbose "CMTrace installed succesfully at $($InstallDest) "
                     }
