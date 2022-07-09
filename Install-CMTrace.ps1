@@ -38,6 +38,7 @@ Function Get-URLHashInfo {
         [Parameter(Mandatory = $true)]
         [string]$URLPath
     )
+    #Initialize WebClient class and return file hash of URI passed to the function
     $WebClient = [System.Net.WebClient]::new()
     $URLHash = Get-FileHash -Algorithm MD5 -InputStream ($WebClient.OpenRead($URLPath))
     return $URLHash
@@ -49,16 +50,18 @@ Function Get-FileHashInfo {
         [Parameter(Mandatory = $true)]
         [string]$FilePath
     )
+    #Return file hash of file passed to the function
     $FileHash = Get-FileHash -Algorithm MD5 -Path $FilePath
     return $FileHash
 }
 
 Function Test-IsRunningAsAdministrator {
-    [CmdletBinding()]param()
+
+    #Get current user and return $tru if they are a local administrator
     $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $IsUserAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-    Write-Verbose "Current User Is Admin = $IsUserAdmin"
-    return $IsUserAdmin
+    $IsAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    Write-Verbose "Current user is an administrator? $IsAdmin"
+    return $IsAdmin
 }
 
 Function Get-FileFromInternet {
