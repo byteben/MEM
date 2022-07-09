@@ -19,7 +19,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$URL = "https://download.microsoft.com/download/5/0/8/508918E1-3627-4383-B7D8-AA07B3490D21/ConfigMgrTools.msi",
+    [string]$URL = "https://download.microsoft.com/download/5/0/8/508918E1-3627-4383-B7D8-AA07B3490D21/ConfigMgrTools.msii",
     [Parameter(Mandatory = $false)]
     [string]$DownloadDir = $env:temp,
     [Parameter(Mandatory = $false)]
@@ -52,14 +52,15 @@ Function Get-FileHashInfo {
     $FileHash = Get-FileHash -Algorithm MD5 -Path $FilePath
     return $FileHash
 }
+
 Function Test-IsRunningAsAdministrator {
     [CmdletBinding()]param()
     $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $IsUserAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
     Write-Verbose "Current User Is Admin = $IsUserAdmin"
-
     return $IsUserAdmin
 }
+
 Function Get-FileFromInternet {
     [CmdletBinding()]
     Param (
@@ -77,7 +78,6 @@ Function Get-FileFromInternet {
     Catch {
         Write-Verbose "It looks like the URL is invalid. Please try again"
         $StatusCode = $_.Exception.Response.StatusCode.value__
-        break
     }
 
     If ($StatusCode -eq 200) {
@@ -99,7 +99,7 @@ Function Get-FileFromInternet {
         }
     }
     else {
-        Write-Verbose "URL Does not exists or the website is down. Status Code: $StatusCode"
+        Write-Verbose "URL Does not exists or the website is down. Status Code: $($StatusCode)"
         break
     }
 }
@@ -124,7 +124,7 @@ else {
             $URLHash = (Get-URLHashInfo -URLPath $URL).hash
             $FileHash = (Get-FileHashInfo -FilePath $FilePath).hash
             Write-Verbose "Checking Hash.."
-            
+
             If (($URLHash -ne $FileHash) -or ([string]::IsNullOrWhitespace($URLHash)) -or ([string]::IsNullOrWhitespace($FileHash))) {
                 Write-Verbose "URL Hash = $($URLHash)"
                 Write-Verbose "File Hash = $($FileHash)"
