@@ -61,10 +61,10 @@ Function Test-ElevatedSession {
     #Get the current user
     $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $IsAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-    $IsSystem = (Get-CurrentUser).User -eq 'S-1-5-18'
+    $IsSystem = $CurrentUser.User -eq 'S-1-5-18'
     Write-Verbose "Current User = $($CurrentUser.Name)"
     Write-Verbose "Current user is an administrator? $IsAdmin"
-    Write-Verbose "Running as system? $RunningAsSystem"
+    Write-Verbose "Running as SYSTEM? $IsSystem"
 
     If ($IsAdmin -or $IsSystem) {
         Write-Verbose "Session elevated? $true"
