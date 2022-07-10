@@ -56,29 +56,22 @@ Function Get-FileHashInfo {
     return $FileHash
 }
 
-Function Get-CurrentUser {
+Function Test-ElevatedSession {
 
     #Get the current user
     $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    Write-Verbose "Current User = $($CurrentUser.Name)"
-    return $CurrentUser
-}
-
-Function Test-IsRunningAsAdministrator {
-
-    #Get current user and return $true if they are a local administrator
-    $CurrentUser = Get-CurrentUser
     $IsAdmin = (New-Object Security.Principal.WindowsPrincipal $CurrentUser).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    $IsSystem = (Get-CurrentUser).User -eq 'S-1-5-18'
+    Write-Verbose "Current User = $($CurrentUser.Name)"
     Write-Verbose "Current user is an administrator? $IsAdmin"
-    return $IsAdmin
-}
-
-Function Test-IsRunningAsSystem {
-
-    #Get current user and return $true if it is SYSTEM
-    $RunningAsSystem = (Get-CurrentUser).User -eq 'S-1-5-18'
     Write-Verbose "Running as system? $RunningAsSystem"
-    return $RunningAsSystem
+
+    If ($IsAdmin -or $IsSystem) {
+        Write-Verbose "Session elevated? $true"
+        $ElevatedSession = $true
+    }
+
+    return $ElevatedSession
 }
 
 Function Get-FileFromInternet {
@@ -127,8 +120,8 @@ Function Get-FileFromInternet {
 }
 
 #Continue if the user running the script is a local administrator or SYSTEM
-If ((!(Test-IsRunningAsAdministrator)) -and (!(Test-IsRunningAsSystem))) {
-    Write-Verbose "The current User is not an administrator or SYSTEM. Please run this script with administrator credentials or in the SYSTEM context"
+If (!(Test-ElevatedSession)) {
+    Write-Verbose "The script has not been run by an administrator or the SYSTEM account. Please re-run this script with administrator credentials or in the SYSTEM context."
 }
 else {
 
