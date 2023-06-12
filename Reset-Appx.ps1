@@ -62,7 +62,7 @@ Process {
             [string[]]$logEntry,
             [string]$logID,
             [parameter(Mandatory = $false)]
-            [string]$logFile = "$($env:temp)\Remove-Appx.log",
+            [string]$logFile = "$($env:temp)\Reset-Appx.log",
             [ValidateSet(1, 2, 3, 4)]
             [string]$severity = 4,
             [string]$component = [string]::Format('{0}:{1}', $logID, $($MyInvocation.ScriptLineNumber))
