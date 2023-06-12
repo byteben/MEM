@@ -200,7 +200,7 @@ Process {
 
             winget install --Name $reinstallApp --accept-package-agreements --accept-source-agreements --exact --source $reinstallAppSource
 
-            if (-not[string]::IsNullOrEmpty({ winget list $reinstallApp --source msstore })) {
+            if (-not[string]::IsNullOrEmpty({ winget list $reinstallApp --source $reinstallAppSource })) {
                 Write-Host "Sucessfully installed $($reinstallApp) using WinGet command line"
                 Write-LogEntry -logEntry "Sucessfully installed $($reinstallApp) using WinGet command line" -logID $logID 
             }
