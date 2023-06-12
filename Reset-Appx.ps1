@@ -110,8 +110,8 @@ Process {
             try {
                 
                 #List users with the AppxPackage installed
-                Write-Host "Found the following users with AppxPackage '$($removeApp)' installed@"
-                Write-LogEntry -logEntry "Found the following users with AppxPackage '$($removeApp)' installed@" -logID $logID 
+                Write-Host "Found the following users with AppxPackage '$($removeApp)' installed:"
+                Write-LogEntry -logEntry "Found the following users with AppxPackage '$($removeApp)' installed:" -logID $logID 
                 
                 foreach ($removeAppxPackageUserInfo in $removeAppxPackage.PackageUserInformation) {
                     $removeAppxPackageUser = ( $removeAppxPackageUserInfo | Where-Object { $_.InstallState -like 'Installed*' } | Select-Object -ExpandProperty UserSecurityId).UserName
@@ -218,9 +218,7 @@ Process {
     # Initial logging
     Write-Host 'Starting AppxPackage and AppxProvisionedPackage removal process'
     Write-Host "Processing AppxPackage: $($removeApp)"
-    Write-LogEntry -logEntry '##################' -logID $logID 
-    Write-LogEntry -logEntry "$($date) $($time) | Starting AppxPackage and AppxProvisionedPackage removal process" -logID $logID 
-    Write-LogEntry -logEntry '##################' -logID $logID 
+    Write-LogEntry -logEntry "** Starting AppxPackage and AppxProvisionedPackage removal process" -logID $logID 
     Write-LogEntry -logEntry "Processing appx package: $($removeApp)" -logID $logID  
 
     # Call Functions
