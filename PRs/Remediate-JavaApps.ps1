@@ -32,7 +32,7 @@ $BadApps = @(
 )
 
 $CustomHandlerDisplayName = "Ninja Notifications"
-$CustomHandlerAppID = "CustomToastNotify"
+$CustomHandlerAppID = "Ninja_Warning_Monitor"
 $GoodMorning = "Good Morning"
 $GoodAfternoon = "Good Afternoon"
 $GoodEvening = "Good Evening"
@@ -235,7 +235,7 @@ Catch {
 }
 
 Try {
-    If (!(Test-Path -Path $CustomHandlerClassRegKey)) {
+    If (!(Test-Path -Path $CustomHandlerClassRegKey\$CustomHandlerAppID)) {
         New-Item -Path $CustomHandlerClassRegKey -Name $CustomHandlerAppID -Force | Out-Null
         New-ItemProperty -Path $CustomHandlerClassRegKey\$CustomHandlerAppID -Name "DisplayName" -Value $CustomHandlerDisplayName -PropertyType String -Force | Out-Null
         New-ItemProperty -Path $CustomHandlerClassRegKey\$CustomHandlerAppID -Name "ShowInSettings" -Value 0 -PropertyType DWORD -Force | Out-Null
