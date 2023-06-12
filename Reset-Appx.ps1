@@ -222,9 +222,10 @@ Process {
             Write-Host "Installing $($reinstallApp) using WinGet command line..."
             Write-LogEntry -logEntry "Installing $($reinstallApp) using WinGet command line..." -logID $logID 
 
-            winget install --Name $reinstallApp --accept-package-agreements --accept-source-agreements --exact --source $reinstallAppSource
+            Set-Location (Resolve-Path $winGetPath).path
+            .\winget.exe install --Name $reinstallApp --accept-package-agreements --accept-source-agreements --exact --source $reinstallAppSource --scope machine
 
-            if (-not[string]::IsNullOrEmpty({ winget list $reinstallApp --source $reinstallAppSource })) {
+            if (-not[string]::IsNullOrEmpty({ .\winget.exe list $reinstallApp --source $reinstallAppSource })) {
                 Write-Host "Sucessfully installed $($reinstallApp) using WinGet command line"
                 Write-LogEntry -logEntry "Sucessfully installed $($reinstallApp) using WinGet command line" -logID $logID 
             }
@@ -256,4 +257,5 @@ Process {
     # Complete
     Write-Output "Completed built-in AppxPackage and AppxProvisionedPackage removal process"
     Write-LogEntry -logEntry "Completed built-in AppxPackage and AppxProvisionedPackage removal process" -logID $logID
+    Set-Location $PSScriptRoot
 }
