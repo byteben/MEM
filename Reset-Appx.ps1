@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Remove a built-in modern app from Windows, for All Users. 
+    Remove a built-in modern app from Windows, for All Users, and reinstall using WinGet
     
 .DESCRIPTION
     This script will remove a specific built-in AppXPackage, for All Users, and also the AppXProvisionedPackage
@@ -10,9 +10,10 @@
     AppxPackage removal can fail if the app was installed from the Microsoft Store. This script will re-register the app for All Users in that instance to allow for removal
 
     .NOTES
-    FileName:    Remove-Appx.ps1
-    Author:      Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research)
-    Contact:     @byteben
+    FileName:   Remove-Appx.ps1
+    Date:       12th June 2023
+    Author:     Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research)
+    Contact:    @byteben
     
 .PARAMETER removeApp
     Specify the AppxPackage and AppxProivisionedPackage to remove
