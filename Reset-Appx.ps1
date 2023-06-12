@@ -135,6 +135,16 @@ Process {
                     Write-LogEntry -logEntry "Removing AppxPackage '$($removeApp)' failed: $($_.Exception.Message)" -logID $logID -severity 3
                 }
             }
+            
+            #Test removal was successful
+            If ([string]::IsNullOrEmpty({ Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } })) {
+                Write-Host "All instances of AppxPackage: $($removeApp) were removed succesfully"
+                Write-LogEntry -logEntry "All instances of AppxPackage: $($removeApp) were removed succesfully" -logID $logID  
+            }
+            else {
+                Write-Warning -Message "Removing AppxPackage '$($removeApp)' for all users was not succesful"
+                Write-LogEntry -logEntry "Removing AppxPackage '$($removeApp)' for all users was not succesful" -logID $logID -severity 3
+            }
         }
         else {
             Write-Output "Did not attempt removal of the AppxPackage '$($removeApp)' because it was not found"
@@ -182,6 +192,17 @@ Process {
         else {
             Write-Output "Did not attempt removal of the AppxProvisionedPackage '$($removeApp)' because it was not found"
             Write-LogEntry -logEntry "Did not attempt removal of the AppxProvisionedPackage '$($removeApp)' because it was not found" -logID $logID -severity 2
+        }
+
+        #Test removal was successful
+        If ([string]::IsNullOrEmpty({ Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName } } 
+            })) {
+            Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
+            Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) was removed succesfully" -logID $logID  
+        }
+        else {
+            Write-Warning -Message "AppxProvisionedPackage: $($removeApp) removal was unsuccessful"
+            Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) removal was unsuccessful" -logID $logID -severity 3
         }
     }
 
