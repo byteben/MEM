@@ -195,8 +195,7 @@ Process {
         }
 
         #Test removal was successful
-        If ([string]::IsNullOrEmpty({ Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName } } 
-            })) {
+        If ([string]::IsNullOrEmpty({ Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }})) {
             Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
             Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) was removed succesfully" -logID $logID  
         }
