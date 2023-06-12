@@ -137,7 +137,9 @@ Process {
             }
             
             #Test removal was successful
-            If ([string]::IsNullOrEmpty({ Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } })) {
+            $testAppx = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp }
+
+            If ([string]::IsNullOrEmpty($testAppx)) {
                 Write-Host "All instances of AppxPackage: $($removeApp) were removed succesfully"
                 Write-LogEntry -logEntry "All instances of AppxPackage: $($removeApp) were removed succesfully" -logID $logID  
             }
@@ -195,7 +197,9 @@ Process {
         }
 
         #Test removal was successful
-        If ([string]::IsNullOrEmpty({ Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }})) {
+        $testAppxProv = Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }
+
+        If ([string]::IsNullOrEmpty($testAppxProv)) {
             Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
             Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) was removed succesfully" -logID $logID  
         }
