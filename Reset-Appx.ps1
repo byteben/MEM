@@ -10,7 +10,7 @@
     AppxPackage removal can fail if the app was installed from the Microsoft Store. This script will re-register the app for All Users in that instance to allow for removal
 
     .NOTES
-    FileName:   Remove-Appx.ps1
+    FileName:   Reset-Appx.ps1
     Date:       12th June 2023
     Author:     Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research)
     Contact:    @byteben
@@ -52,10 +52,6 @@ Begin {
     $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName
     $removeAppxPackageError = $null
 
-    #Time format
-    $dateTime = Get-Date
-    $date = $dateTime.ToString("MM-dd-yyyy", [Globalization.CultureInfo]::InvariantCulture)
-    $time = $dateTime.ToString("HH:mm:ss", [Globalization.CultureInfo]::InvariantCulture)
 }
 
 Process {
@@ -231,7 +227,9 @@ Process {
                 Set-Location (Resolve-Path $winGetPath).path
                 .\winget.exe install --Name $reinstallApp --accept-package-agreements --accept-source-agreements --exact --source $reinstallAppSource --scope machine
 
-                if (-not[string]::IsNullOrEmpty({ .\winget.exe list $reinstallApp --source $reinstallAppSource })) {
+                $winGetTest = .\winget.exe list $reinstallApp --source $reinstallAppSource
+
+                if ($winGetTest -notlike "*No installed package found*") {
                     Write-Host "Sucessfully installed $($reinstallApp) using WinGet command line"
                     Write-LogEntry -logEntry "Sucessfully installed $($reinstallApp) using WinGet command line" -logID $logID 
                 }
