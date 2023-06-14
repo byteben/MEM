@@ -11,10 +11,24 @@
     WinGet will then install the app in the scope of the machine
 
     .NOTES
-    FileName:   Reset-Appx.ps1
-    Date:       12th June 2023
-    Author:     Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research)
-    Contact:    @byteben
+    FileName:       Reset-Appx.ps1
+    Date:           12th June 2023
+    Author:         Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research and blog at https://patchtuesday.com/blog/intune-microsoft-store-integration-app-migration-failure/)
+    Contact:        @byteben
+    Manifest:       https://storeedgefd.dsx.mp.microsoft.com/v9.0/packageManifests/9WZDNCRFJ3PZ
+    
+    Version History:
+
+    1.06.14.0 - Minor Fixes
+
+        -   Fixed an issue detecting WinGet output array and now loop through each array item looking for strings
+        -   Fixed an issue where AppxProvisionedPackage would indicate succesful removal even if it wasn't installed
+        -   Fixed an issue where WinGet install and list commands returned unexecpeted result. Now using Package ID instead of Package Name
+        -   Changed path testing for WinGet binary
+        -   Increased logging detail for each test
+
+
+    1.06.12.0 - Release
     
 .PARAMETER removeApp
     Specify the AppxPackage and AppxProivisionedPackage to remove
@@ -36,8 +50,9 @@
 param(
     [Parameter(Mandatory = $false)]
     [string]$removeApp = 'Microsoft.CompanyPortal',
-    [string]$reinstallApp = 'Company Portal',
-    [string]$reinstallAppSource = 'msstore',
+    [string]$winGetApp = '9WZDNCRFJ3PZ',
+    [string]$winGetAppName = 'Company Portal',
+    [string]$winGetAppSource = 'msstore',
     [string]$logID = 'Main'
 )
 
@@ -51,8 +66,6 @@ Begin {
     #Create variables
     $removeAppxPackage = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction SilentlyContinue
     $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName -ErrorAction SilentlyContinue
-    $removeAppxPackageError = $null
-
 }
 
 Process {
@@ -107,6 +120,9 @@ Process {
         )
 
         # Attempt to remove AppxPackage
+        Write-Host "Processing AppxPackage: $($removeApp)"
+        Write-LogEntry -logEntry "Processing appx package: $($removeApp)" -logID $logID 
+
         If (-not[string]::IsNullOrEmpty($removeAppxPackage)) {
            
             try {
@@ -187,6 +203,7 @@ Process {
             try {
                 Write-LogEntry -logEntry "Removing AppxProvisioningPackage: $($removeAppxProvisionedPackageName)" -logID $logID 
                 Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName } | Remove-AppxProvisionedPackage -AllUsers -ErrorAction Stop | Out-Null
+                $removeAppxProvisionedPackageRemovalAttempt = $true
             }
             catch [System.Exception] {
                 Write-Warning -message "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed: $($_.Exception.Message)"
@@ -199,15 +216,18 @@ Process {
         }
 
         #Test removal was successful
-        $testAppxProv = Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }
+        If ($removeAppxProvisionedPackageRemovalAttempt -eq $true) {
 
-        If ([string]::IsNullOrEmpty($testAppxProv)) {
-            Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
-            Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) was removed succesfully" -logID $logID  
-        }
-        else {
-            Write-Warning -Message "AppxProvisionedPackage: $($removeApp) removal was unsuccessful"
-            Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) removal was unsuccessful" -logID $logID -severity 3
+            $testAppxProv = Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }
+
+            If ([string]::IsNullOrEmpty($testAppxProv)) {
+                Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
+                Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) was removed succesfully" -logID $logID  
+            }
+            else {
+                Write-Warning -Message "AppxProvisionedPackage: $($removeApp) removal was unsuccessful"
+                Write-LogEntry -logEntry "AppxProvisionedPackage: $($removeApp) removal was unsuccessful" -logID $logID -severity 3
+            }
         }
     }
 
@@ -215,33 +235,87 @@ Process {
         [CmdletBinding()]
         Param(
             [string]$logID = $($MyInvocation.MyCommand).Name,
-            [string]$winGetPath = 'C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe'
+            [string]$winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }).InstallLocation
         )
     
         # Attempt to install app using WinGet
         If (Test-Path -Path $winGetPath) {
-            
-            Write-Host "Installing $($reinstallApp) using WinGet command line..."
-            Write-LogEntry -logEntry "Installing $($reinstallApp) using WinGet command line..." -logID $logID 
-                
+
+            Write-Host "The WinGet command line binary was found at '$($winGetPath)'"
+            Write-LogEntry -logEntry "The WinGet command line binary was found at '$($winGetPath)'" -logID $logID 
+        
             Try {
-                Set-Location (Resolve-Path $winGetPath).path
-                .\winget.exe install --Name $reinstallApp --accept-package-agreements --accept-source-agreements --exact --source $reinstallAppSource --scope machine
 
-                $winGetTest = .\winget.exe list $reinstallApp --source $reinstallAppSource
+                Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..."
+                Write-Host "winget.exe list --id $($winGetApp) --source $($winGetAppSource)"
+                Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..." -logID $logID
+                Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource)" -logID $logID 
 
-                if ($winGetTest -notlike "*No installed package found*") {
-                    Write-Host "Sucessfully installed $($reinstallApp) using WinGet command line"
-                    Write-LogEntry -logEntry "Sucessfully installed $($reinstallApp) using WinGet command line" -logID $logID 
+                Set-Location $winGetPath
+                $winGetTest = .\winget.exe list --id $winGetApp --source $winGetAppSource
+                
+                foreach ($line in $winGetTest) {
+                    If ($line -like "*No installed package found*") {
+                        $winGetAppMissing = $true
+                    }
+                    If ($line -like $winGetApp) {
+                        $winGetAppAlreadyInstalled = $true
+                    }
                 }
-                else {
-                    Write-Host "$($reinstallApp) not found after attempting install with WinGet command line..."
-                    Write-LogEntry -logEntry "$($reinstallApp) not found after attempting install with WinGet command line..." -logID $logID -severity 2
+
+                if ($winGetAppMissing -eq $true) {
+
+                    Write-Host "The 'Winget list' command line indicated the '$($winGetAppName)' app, with Id '$($winGetApp)', was not installed. Installing '$($winGetAppName)' using WinGet command line..."
+                    Write-LogEntry -logEntry "The 'Winget list' command line indicated the '$($winGetAppName)' app, with Id '$($winGetApp)', was not installed. Installing '$($winGetAppName)' using WinGet command line..." -logID $logID 
+
+                    Try {
+                        Write-Host ".\winget.exe install --id '$winGetApp' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine"
+                        Write-LogEntry -logEntry ".\winget.exe install --Id '$winGetApp' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine" -logID $logID
+
+                        .\winget.exe install --id $winGetApp --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine
+                        $winGetAppInstallAttempted = $true
+                    }
+                    Catch {
+                        Write-Warning -Message "There was an error installing '$($winGetAppName)', with Id '$($winGetApp)', using the WinGet command line"
+                        Write-Warning -Message "$($_.Exception.Message)"
+                        Write-LogEntry -logEntry "There was an error installing '$($winGetAppName)', with Id '$($winGetApp)', using the WinGet command line" -logID $logID -severity 3
+                        Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+                    }
+                }
+                
+                if ($winGetAppAlreadyInstalled -eq $true) {
+                
+                    Write-Host "The 'Winget list' command line indicated the $($winGetAppName) app, with Id '$($winGetApp)', is already installed"
+                    Write-LogEntry -logEntry "The 'Winget list' command line indicated the $($winGetAppName) app, with Id '$($winGetApp)', is already installed" -logID $logID -severity 2
                 }
             }
             Catch {
-                Write-Warning -Message "There was an error installing $($removeApp) using WinGet. $($_.Exception.Message)"
-                Write-LogEntry -logEntry "There was an error installing $($removeApp) using WinGet. $($_.Exception.Message)" -logID $logID -severity 3
+                Write-Warning -Message "Error while running the WinGet command line to check if $($winGetAppName) is already installed"
+                Write-Warning -Message "$($_.Exception.Message)"
+                Write-LogEntry -logEntry "Error while running the WinGet command line to check if $($winGetAppName) is already installed" -logID $logID -severity 3
+                Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+            }
+
+            #Test package was succesfully installed
+
+            Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..."
+            Write-Host "winget.exe list --id $($winGetApp) --source $($winGetAppSource)"
+            Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..." -logID $logID
+            Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource)" -logID $logID 
+
+            If ($winGetAppInstallAttempted -eq $true) {
+
+                $testWinGetInstall = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction Stop
+
+                If ($testWinGetInstall.Name -eq $removeApp) {
+
+                    Write-Host "Success: The '$($winGetAppName)' app, with Id $($winGetApp), installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
+                    Write-LogEntry -logEntry "Success: The '$($winGetAppName)' app, with Id '$($winGetApp)', installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID
+                }
+                else {
+                    Write-Host "Error: The '$($winGetAppName)' app, with Id '$($winGetApp)', did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
+                    Write-LogEntry -logEntry "Error: The '$($winGetAppName)' app, with Id '$($winGetApp)', did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID -severity 2
+                }
             }
         }
         else {
@@ -251,21 +325,19 @@ Process {
     }
 
     # Initial logging
-    Write-Host 'Starting AppxPackage and AppxProvisionedPackage removal process'
-    Write-Host "Processing AppxPackage: $($removeApp)"
-    Write-LogEntry -logEntry "** Starting AppxPackage and AppxProvisionedPackage removal process" -logID $logID 
-    Write-LogEntry -logEntry "Processing appx package: $($removeApp)" -logID $logID  
+    Write-Host '** Starting processing the script' 
+    Write-LogEntry -logEntry '** Starting processing the script' -logID $logID 
 
     # Call Functions
     Remove-AppxPkg
     Remove-AppxProvPkg
 
-    if ($reinstallApp -and $reinstallAppSource) {
+    if ($winGetApp -and $winGetAppSource) {
         Install-WinGetApp
     }
 
     # Complete
-    Write-Output "Completed built-in AppxPackage and AppxProvisionedPackage removal process"
-    Write-LogEntry -logEntry "Completed built-in AppxPackage and AppxProvisionedPackage removal process" -logID $logID
+    Write-Output "Finished processing the script"
+    Write-LogEntry -logEntry "Finished processing the script" -logID $logID
     Set-Location $PSScriptRoot
 }
