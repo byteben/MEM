@@ -3,11 +3,12 @@
     Remove a built-in modern app from Windows, for All Users, and reinstall using WinGet
     
 .DESCRIPTION
-    This script will remove a specific built-in AppXPackage, for All Users, and also the AppXProvisionedPackage
-    When deploying apps from the new store, via Intune, in the SYSTEM context, an error appears for the deployment if the app was previous deployed in the USER context
-    "The application was not detect after installation complete successfully (0x87D1041C)"
+    This script will remove a specific built-in AppXPackage, for All Users, and also the AppXProvisionedPackage if it exists
+    When deploying apps from the new store, via Intune, in the SYSTEM context, an error appears for the deployment if the same app was previous deployed in the USER context
+    "The application was not detected after installation completed successfully (0x87D1041C)"
     This script will remove all existing instances of the app so the app from Intune can be installed sucessfully
     AppxPackage removal can fail if the app was installed from the Microsoft Store. This script will re-register the app for All Users in that instance to allow for removal
+    WinGet will then install the app in the scope of the machine
 
     .NOTES
     FileName:   Reset-Appx.ps1
@@ -17,15 +18,15 @@
     
 .PARAMETER removeApp
     Specify the AppxPackage and AppxProivisionedPackage to remove
-    This is not required. The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
+    The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
 
 .PARAMETER reinstallApp
-    Specify app to reinstall using WinGet
-    This is not required. The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
+    Specify the app to reinstall using WinGet. Use Winget Search "*appname*" to understand which name you should use
+    The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
 
 .PARAMETER reinstallSource
-    Specify WinGet source to use. Typically this will be msstore
-    This is not required. The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
+    Specify WinGet source to use. Typically this will be msstore for apps with the issue outlined in the description of this script
+    The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
 
 .EXAMPLE
     .\Reset-Appx.ps1
@@ -63,7 +64,7 @@ Process {
             [string[]]$logEntry,
             [string]$logID,
             [parameter(Mandatory = $false)]
-            [string]$logFile = "$($env:temp)\Reset-Appx.log",
+            [string]$logFile = "$($env:ProgramData)\Microsoft\IntuneManagementExtension\Logs\Reset-Appx.log",
             [ValidateSet(1, 2, 3, 4)]
             [string]$severity = 4,
             [string]$component = [string]::Format('{0}:{1}', $logID, $($MyInvocation.ScriptLineNumber))
