@@ -49,8 +49,8 @@ Begin {
     }
 
     #Create variables
-    $removeAppxPackage = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp }
-    $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName
+    $removeAppxPackage = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction SilentlyContinue
+    $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName -ErrorAction SilentlyContinue
     $removeAppxPackageError = $null
 
 }
