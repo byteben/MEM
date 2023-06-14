@@ -15,18 +15,18 @@
     Date:           12th June 2023
     Author:         Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research and blog at https://patchtuesday.com/blog/intune-microsoft-store-integration-app-migration-failure/)
     Contact:        @byteben
-    Manifest:       https://storeedgefd.dsx.mp.microsoft.com/v9.0/packageManifests/9WZDNCRFJ3PZ
+    Manifest:       Company Portal manifest: https://storeedgefd.dsx.mp.microsoft.com/v9.0/packageManifests/9WZDNCRFJ3PZ
     
     Version History:
 
     1.06.14.0 - Minor Fixes
 
-        -   Fixed an issue detecting WinGet output array and now loop through each array item looking for strings
+        -   Fixed an issue with the WinGet output array object and now we loop through each array item looking for output strings
         -   Fixed an issue where AppxProvisionedPackage would indicate succesful removal even if it wasn't installed
         -   Fixed an issue where WinGet install and list commands returned unexecpeted result. Now using Package ID instead of Package Name
-        -   Changed path testing for WinGet binary
+        -   Fixed an issue where "WingGet list" would not detect the app after it was installed. Using Get-AppxPackage instead to improve reliability of detection
+        -   Changed path tests for WinGet binary
         -   Increased logging detail for each test
-
 
     1.06.12.0 - Release
     
@@ -298,10 +298,10 @@ Process {
 
             #Test package was succesfully installed
 
-            Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..."
-            Write-Host "winget.exe list --id $($winGetApp) --source $($winGetAppSource)"
-            Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..." -logID $logID
-            Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource)" -logID $logID 
+            Write-Host "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..."
+            Write-Host "Get-AppXPackage -AllUsers | Where-Object { $$_.Name -like $($removeApp) } -ErrorAction Stop"
+            Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..." -logID $logID
+            Write-LogEntry -logEntry "Get-AppXPackage -AllUsers | Where-Object { $$_.Name -like $($removeApp) } -ErrorAction Stop" -logID $logID 
 
             If ($winGetAppInstallAttempted -eq $true) {
 
