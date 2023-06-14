@@ -299,9 +299,9 @@ Process {
             #Test package was succesfully installed
 
             Write-Host "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..."
-            Write-Host "Get-AppXPackage -AllUsers | Where-Object { $$_.Name -like $($removeApp) } -ErrorAction Stop"
+            Write-Host "Get-AppXPackage -AllUsers | Where-Object { `$_.Name -like $($removeApp) } -ErrorAction Stop"
             Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..." -logID $logID
-            Write-LogEntry -logEntry "Get-AppXPackage -AllUsers | Where-Object { $$_.Name -like $($removeApp) } -ErrorAction Stop" -logID $logID 
+            Write-LogEntry -logEntry "Get-AppXPackage -AllUsers | Where-Object { `$_.Name -like $($removeApp) } -ErrorAction Stop" -logID $logID 
 
             If ($winGetAppInstallAttempted -eq $true) {
 
