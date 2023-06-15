@@ -19,6 +19,12 @@
     
     Version History:
 
+    1.06.15.0 - Bug Fixes
+
+        -   Fixed an issue where AppxProvisionedPackage removal was not working as expected
+        -   Fixed an issue where winGetPath would return more than one package. We now sort results in descending order and select the first 1
+        -   Fixed an issue where --accept-source-agreements was omitted from "winget list" to search for an existing app
+
     1.06.14.0 - Minor Fixes
 
         -   Fixed an issue with the WinGet output array object and now we loop through each array item looking for output strings
@@ -128,13 +134,13 @@ Process {
             try {
                 
                 #List users with the AppxPackage installed
-                Write-Host "Found the following users with AppxPackage '$($removeApp)' installed:"
-                Write-LogEntry -logEntry "Found the following users with AppxPackage '$($removeApp)' installed:" -logID $logID 
+                Write-Host "Found the following users with AppxPackage '$($removeApp)':"
+                Write-LogEntry -logEntry "Found the following users with AppxPackage '$($removeApp)':" -logID $logID 
                 
                 foreach ($removeAppxPackageUserInfo in $removeAppxPackage.PackageUserInformation) {
-                    $removeAppxPackageUser = ( $removeAppxPackageUserInfo | Where-Object { $_.InstallState -like 'Installed*' } | Select-Object -ExpandProperty UserSecurityId).UserName
-                    Write-Host $removeAppxPackageUser
-                    Write-LogEntry -logEntry $removeAppxPackageUser -logID $logID 
+                    $removeAppxPackageUser = ( $removeAppxPackageUserInfo | Select-Object -ExpandProperty UserSecurityId).UserName
+                    Write-Host "User: '$($removeAppxPackageUser)', InstallState: '$($removeAppxPackageUserInfo.InstallState)'"
+                    Write-LogEntry -logEntry "User: '$($removeAppxPackageUser)', InstallState: '$($removeAppxPackageUserInfo.InstallState)'" -logID $logID 
                 }
 
                 Write-Host "Removing AppxPackage: $($removeApp)"
@@ -142,15 +148,22 @@ Process {
                 Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
             }
             catch [System.Exception] {
-                Write-Warning "AppxPackage removal failed. AppxPackage '$($removeApp)' needs to be re-registered before it can be removed."
-                Write-LogEntry -logEntry "AppxPackage removal failed. AppxPackage '$($removeApp)' needs to be re-registered before it can be removed." -logID $logID 
                 
                 if ( $_.Exception.Message -like "*HRESULT: 0x80073CF1*") {
-                    $removeAppxPackageError = $true
+                    Write-Warning "AppxPackage removal failed. Error: 0x80073CF1. The manifest for the '$($removeApp)' needs to be re-registered before it can be removed."
+                    Write-LogEntry -logEntry "AppxPackage removal failed. Error: 0x80073CF1. The manifest for the '$($removeApp)' needs to be re-registered before it can be removed." -logID $logID 
+                    $removeAppxPackageError0x80073CF1 = $true
+                }
+                elseif ($_.Exception.Message -like "*failed with error 0x80070002*") {
+                    Write-Warning "AppxPackage removal failed. Error 0x80070002"
+                    Write-LogEntry -logEntry "AppxPackage removal failed. Error 0x80070002" -logID $logID 
+                    $removeAppxPackageError0x80070002 = $true
                 }
                 else {
-                    Write-Warning -Message "Removing AppxPackage '$($removeApp)' failed: $($_.Exception.Message)"
-                    Write-LogEntry -logEntry "Removing AppxPackage '$($removeApp)' failed: $($_.Exception.Message)" -logID $logID -severity 3
+                    Write-Warning -Message "Removing AppxPackage '$($removeApp)' failed"
+                    Write-Warning -Message $_.Exception.Message
+                    Write-LogEntry -logEntry "Removing AppxPackage '$($removeApp)' failed" -logID $logID -severity 3
+                    Write-LogEntry -logEntry $_.Exception.Message -logID $logID -severity 3
                 }
             }
             
@@ -172,7 +185,7 @@ Process {
         }
 
         #Re-register AppxPackage for all users and attempt removal again
-        if ( $removeAppxPackageError ) {
+        if ( $removeAppxPackageError0x80073CF1 ) {
             Write-Host "Attempting to re-register AppxPackage '$($removeApp)'..."
             Write-LogEntry -logEntry "Attempting to re-register AppxPackage '$($removeApp)'..." -logID $logID 
 
@@ -189,6 +202,10 @@ Process {
                 Write-LogEntry -logEntry "Re-registering AppxPackage '$($removeApp)' failed: $($_.Exception.Message)" -logID $logID -severity 3
             }
         }
+        if (  $removeAppxPackageError0x80070002 ) {
+            write-host "fix 0x80070002"
+        }
+
     }
 
     function Remove-AppxProvPkg {
@@ -201,13 +218,19 @@ Process {
         If (-not[string]::IsNullOrEmpty($removeAppxProvisionedPackageName)) {
 
             try {
+                Write-Host "Removing AppxProvisioningPackage: $($removeAppxProvisionedPackageName)"
                 Write-LogEntry -logEntry "Removing AppxProvisioningPackage: $($removeAppxProvisionedPackageName)" -logID $logID 
-                Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName } | Remove-AppxProvisionedPackage -AllUsers -ErrorAction Stop | Out-Null
+                Write-Host "Get-AppxProvisionedPackage -Online | Where-Object { `$_.PackageName -eq $($removeAppxProvisionedPackageName) } | Remove-AppxProvisionedPackage -AllUsers -ErrorAction Stop"
+                Write-LogEntry -logEntry "Get-AppxProvisionedPackage -Online | Where-Object { `$_.PackageName -eq $($removeAppxProvisionedPackageName) } | Remove-AppxProvisionedPackage -AllUsers -ErrorAction Stop" -logID $logID 
+
+                Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisionedPackageName } | Remove-AppxProvisionedPackage -AllUsers -ErrorAction Stop
                 $removeAppxProvisionedPackageRemovalAttempt = $true
             }
             catch [System.Exception] {
-                Write-Warning -message "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed: $($_.Exception.Message)"
-                Write-LogEntry -logEntry "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed: $($_.Exception.Message)" -logID $logID -severity 3
+                Write-Warning -message "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed"
+                Write-Warning -message $_.Exception.Message
+                Write-LogEntry -logEntry "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed" -logID $logID -severity 3
+                Write-LogEntry -logEntry $_.Exception.Message -logID $logID -severity 3
             }
         }
         else {
@@ -218,7 +241,7 @@ Process {
         #Test removal was successful
         If ($removeAppxProvisionedPackageRemovalAttempt -eq $true) {
 
-            $testAppxProv = Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisioningPackageName }
+            $testAppxProv = Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -eq $removeAppxProvisionedPackageName }
 
             If ([string]::IsNullOrEmpty($testAppxProv)) {
                 Write-Host "AppxProvisionedPackage: $($removeApp) was removed succesfully"
@@ -235,7 +258,7 @@ Process {
         [CmdletBinding()]
         Param(
             [string]$logID = $($MyInvocation.MyCommand).Name,
-            [string]$winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }).InstallLocation
+            [string]$winGetPath = ((Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq 'Microsoft.DesktopAppInstaller' }).InstallLocation | Sort-Object -Descending | Select-Object -First 1)
         )
     
         # Attempt to install app using WinGet
@@ -247,12 +270,12 @@ Process {
             Try {
 
                 Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..."
-                Write-Host "winget.exe list --id $($winGetApp) --source $($winGetAppSource)"
+                Write-Host "winget.exe list --id $($winGetApp) --source $($winGetAppSource) --accept-source-agreements"
                 Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..." -logID $logID
-                Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource)" -logID $logID 
+                Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource) --accept-source-agreements" -logID $logID 
 
                 Set-Location $winGetPath
-                $winGetTest = .\winget.exe list --id $winGetApp --source $winGetAppSource
+                $winGetTest = .\winget.exe list --id $winGetApp --source $winGetAppSource --accept-source-agreements
                 
                 foreach ($line in $winGetTest) {
                     If ($line -like "*No installed package found*") {
@@ -331,7 +354,7 @@ Process {
     # Call Functions
     Remove-AppxPkg
     Remove-AppxProvPkg
-
+   
     if ($winGetApp -and $winGetAppSource) {
         Install-WinGetApp
     }
