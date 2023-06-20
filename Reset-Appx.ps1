@@ -87,6 +87,7 @@ Begin {
     # Create variables
     $removeAppxPackage = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction SilentlyContinue
     $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName -ErrorAction SilentlyContinue
+    $global:winGetPath = $null
 }
 
 Process {
@@ -280,7 +281,7 @@ Process {
         Write-LogEntry -logEntry "Testing the WinGet package and other dependancies are installed" -logID $logID
 
         try {
-            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1
+            $global:winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1
         }
         catch {
             $testWinGetFail = $true
@@ -288,13 +289,13 @@ Process {
             Write-LogEntry -logEntry "There was a problem getting details of the '$($winGetPackageName)' package" -logID $logID -severity 3
         }
 
-        if ([string]::IsNullOrEmpty($winGetPath)) {
+        if ([string]::IsNullOrEmpty($global:winGetPath)) {
             $testWinGetFail = $true
             Write-Warning "The '$($winGetPackageName)' package was not found'"
             Write-LogEntry -logEntry "The '$($winGetPackageName)' package was not found" -logID $logID  -severity 3
         }
         else {
-            $winGetBinaryPath = Join-Path -Path $winGetPath -ChildPath 'WinGet.exe'
+            $winGetBinaryPath = Join-Path -Path $global:winGetPath -ChildPath 'WinGet.exe'
 
             try {
                 
@@ -304,8 +305,8 @@ Process {
                 }
                 else {
                     $testWinGetFail = $true
-                    Write-Warning "The '$($winGetPackageName)' package was found at '$($winGetPath)' but the WinGet binary was not found at '$($winGetBinaryPath)'"
-                    Write-LogEntry -logEntry "The '$($winGetPackageName)' package was found at '$($winGetPath)' but the WinGet binary was not found at '$($winGetBinaryPath)'" -logID $logID -severity 3
+                    Write-Warning "The '$($winGetPackageName)' package was found at '$($global:winGetPath)' but the WinGet binary was not found at '$($winGetBinaryPath)'"
+                    Write-LogEntry -logEntry "The '$($winGetPackageName)' package was found at '$($global:winGetPath)' but the WinGet binary was not found at '$($winGetBinaryPath)'" -logID $logID -severity 3
                 }
             }
             catch {
@@ -323,7 +324,7 @@ Process {
             
             # Test WinGet running as SYSTEM
             try {
-                Set-Location $winGetPath
+                Set-Location $global:winGetPath
                 $winGetTest = .\winget.exe --version
 
                 if (-not[string]::IsNullOrEmpty($winGetTest)) {
@@ -369,7 +370,7 @@ Process {
             Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetApp)'..." -logID $logID
             Write-LogEntry -logEntry "winget.exe list --id '$($winGetApp)' --source $($winGetAppSource) --accept-source-agreements" -logID $logID 
 
-            Set-Location $winGetPath
+            Set-Location $global:winGetPath
             $winGetTest = .\winget.exe list --id $winGetApp --source $winGetAppSource --accept-source-agreements
                 
             foreach ($line in $winGetTest) {
