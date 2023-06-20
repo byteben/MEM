@@ -20,6 +20,10 @@
     
     Version History:
 
+    1.06.20.0 - Bug Fixes
+
+    -   Fixed an issue where winGetPath was not declared globally. Thanks https://github.com/Sn00zEZA for reporting
+
     1.06.18.0 - Bug Fixes and New Function
 
     -   New function "Test-WinGet" added to test if WinGet is installed and working. AppXPackages will not be removed if there is an issue with the WinGet command line
@@ -280,7 +284,7 @@ Process {
         Write-LogEntry -logEntry "Testing the WinGet package and other dependancies are installed" -logID $logID
 
         try {
-            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1
+            $global:winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1
         }
         catch {
             $testWinGetFail = $true
