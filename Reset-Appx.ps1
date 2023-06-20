@@ -463,6 +463,39 @@ Process {
 
         Remove-AppxPkg
         Remove-AppxProvPkg
+
+        # Get Win32app reg key path(s)
+        $regkeys = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps | Select-Object Name| where {$_.name -notlike "*\Reporting"}
+
+        # Loop through each path and remove it
+        foreach ($key in $regkeys)
+        {
+        $name = $key.name
+        $name = $name.replace("HKEY_LOCAL_MACHINE","HKLM:")
+        write-host "Remove Reg key $name"
+        Remove-Item -Path $name -Recurse
+        }
+
+        # Restart the Intune service
+        Restart-Service -Name IntuneManagementExtension
+
+        # Check and wait until service has restarted
+        while ($servicestarted -ne $true)
+        {
+        $service = Get-service IntuneManagementExtension
+        write-host "waiting for service to restart"
+        if ($service.status -eq 'Running'){$servicestarted = $true}
+        sleep -Seconds 1
+        }
+
+        # Confirm service has started
+        $service = Get-service IntuneManagementExtension
+        write-host "Service state is" $service.status
+
+        # Start scheduled task to force Intune synchronisation
+        write-host "Starting sync"
+        Get-ScheduledTask | ?{$_.TaskName -eq 'PushLaunch'} | Start-ScheduledTask
+        
     }
 
     # Complete
