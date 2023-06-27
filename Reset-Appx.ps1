@@ -20,6 +20,12 @@
     
     Version History:
 
+    1.06.27.0 - Bug Fixes and Enhancements
+
+    -   Now installing app with winget using --name instead of --id to avoid an issue where winget log indicated "No app found matching input criteria"
+    -   Fixed an issue where winget would provision the appxProvisionedPackage but the package manifest was not registered resulting in the app not being installed for the logged on user
+    -   Replaced like with eq for consistency when searching for appxProvisionedPackages and appxPackages
+
     1.06.20.0 - Bug Fixes
 
     -   Fixed an issue where winGetPath was not declared globally. Thanks https://github.com/Sn00zEZA for reporting
@@ -89,8 +95,8 @@ Begin {
     }
 
     # Create variables
-    $removeAppxPackage = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction SilentlyContinue
-    $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $removeApp } | Select-Object -ExpandProperty PackageName -ErrorAction SilentlyContinue
+    $removeAppxPackage = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } -ErrorAction SilentlyContinue
+    $removeAppxProvisionedPackageName = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $removeApp } | Select-Object -ExpandProperty PackageName -ErrorAction SilentlyContinue
 }
 
 Process {
@@ -164,7 +170,7 @@ Process {
 
                 Write-Host "Removing AppxPackage: $($removeApp)"
                 Write-LogEntry -logEntry "Removing AppxPackage: $($removeApp)" -logID $logID  
-                Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
+                Get-AppXPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
             }
             catch [System.Exception] {
                 
@@ -176,7 +182,6 @@ Process {
                 elseif ($_.Exception.Message -like "*failed with error 0x80070002*") {
                     Write-Warning "AppxPackage removal failed. Error 0x80070002"
                     Write-LogEntry -logEntry "AppxPackage removal failed. Error 0x80070002" -logID $logID 
-                    $removeAppxPackageError0x80070002 = $true
                 }
                 else {
                     Write-Warning -Message "Removing AppxPackage '$($removeApp)' failed"
@@ -187,7 +192,7 @@ Process {
             }
             
             # Test removal was successful
-            $testAppx = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp }
+            $testAppx = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp }
 
             if ([string]::IsNullOrEmpty($testAppx)) {
                 Write-Host "All instances of AppxPackage: $($removeApp) were removed succesfully"
@@ -209,13 +214,13 @@ Process {
             Write-LogEntry -logEntry "Attempting to re-register AppxPackage '$($removeApp)'..." -logID $logID 
 
             try {
-                Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
+                Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
                 
-                If (-not[string]::IsNullOrEmpty( { Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } } )) {
+                If (-not[string]::IsNullOrEmpty( { Get-AppxPackage -AllUsers | Where-Object { $_.Name -like $removeApp } } )) {
                     Write-Host "AppxPackage '$($removeApp)' registered succesfully"
                     Write-LogEntry -logEntry "AppxPackage '$($removeApp)' registered succesfully" -logID $logID 
                 }
-                Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
+                Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
             }
             catch {
                 Write-Warning -Message "Re-registering AppxPackage '$($removeApp)' failed: $($_.Exception.Message)"
@@ -393,12 +398,12 @@ Process {
                 Write-LogEntry -logEntry "The 'Winget list' command line indicated the '$($winGetAppName)' app, with Id '$($winGetApp)', was not installed. Installing '$($winGetAppName)' using WinGet command line..." -logID $logID 
 
                 try {
-                    Write-Host "Installing '$($winGetAppName)', with Id '$($winGetApp)', using the WinGet command line"
-                    Write-LogEntry -logEntry "Installing '$($winGetAppName)', with Id '$($winGetApp)', using the WinGet command line" -logID $logID
-                    Write-Host ".\winget.exe install --id '$winGetApp' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine"
-                    Write-LogEntry -logEntry ".\winget.exe install --Id '$winGetApp' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine" -logID $logID
+                    Write-Host "Installing '$($winGetAppName)' using the WinGet command line"
+                    Write-LogEntry -logEntry "Installing '$($winGetAppName)' using the WinGet command line" -logID $logID
+                    Write-Host ".\winget.exe install --name '$winGetAppName' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine"
+                    Write-LogEntry -logEntry ".\winget.exe install --name '$winGetAppName' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine" -logID $logID
 
-                    .\winget.exe install --id $winGetApp --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine
+                    .\winget.exe install --name $winGetAppName --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine
                     $winGetAppInstallAttempted = $true
                 }
                 catch {
@@ -421,24 +426,59 @@ Process {
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
         }
 
-        # Test package was succesfully installed
-
-        Write-Host "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..."
-        Write-Host "Get-AppXPackage -AllUsers | Where-Object { `$_.Name -like `"*$($removeApp)*`" } -ErrorAction Stop"
-        Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Get-AppXPackage..." -logID $logID
-        Write-LogEntry -logEntry "Get-AppXPackage -AllUsers | Where-Object { `$_.Name -like `"*$($removeApp)*`" } -ErrorAction Stop" -logID $logID 
+        
 
         if ($winGetAppInstallAttempted) {
-            $testWinGetInstall = Get-AppXPackage -AllUsers | Where-Object { $_.Name -like $removeApp } -ErrorAction Stop
 
-            if ($testWinGetInstall.Name -eq $removeApp) {
+            # Test package was succesfully installed
+            Write-Host "Checking if '$($winGetAppName)' is installed using Get-AppxProvisionedPackage..."
+            Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Get-AppxProvisionedPackage..." -logID $logID
 
-                Write-Host "Success: The '$($winGetAppName)' app, with Id $($winGetApp), installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
-                Write-LogEntry -logEntry "Success: The '$($winGetAppName)' app, with Id '$($winGetApp)', installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID
+            $testAppxProvisionedPackage = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $removeApp } | Select-Object -ExpandProperty DisplayName
+            
+            if ($testAppxProvisionedPackage -eq $removeapp) {
+
+                Write-Host "Success: The '$($winGetAppName)' AppxProvisionedPackage was installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
+                Write-LogEntry -logEntry "Success: The '$($winGetAppName)' AppxProvisionedPackage was installed succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID
+                
+                $testAppx = $null
+                $testAppx = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp }
+
+                if ([string]::IsNullOrEmpty($testAppx)) {
+                    Write-Host "Although the '$($removeApp)' appxProvisionedPackage installed succesfully, the manifest needs registering"
+                    Write-LogEntry -logEntry "Although the '$($removeApp)' appxProvisionedPackage installed succesfully, the manifest needs registering" -logID $logID
+
+                    try {
+                        Write-Host "Attempting to register '$($removeApp)'..."
+                        Write-LogEntry -logEntry "Attempting to register '$($removeApp)'..." -logID $logID
+
+                        Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
+                       
+                        $testAppx = $null
+                        $testAppx = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp }
+
+                        if (-not[string]::IsNullOrEmpty($testAppx)) {
+                            Write-Host "AppxPackage '$($removeApp)' registered succesfully"
+                            Write-LogEntry -logEntry "AppxPackage '$($removeApp)' registered succesfully" -logID $logID 
+                        }
+                        else {
+                            Write-Warning -Message "AppxPackage '$($removeApp)' failed to register. A reboot may be required to complete the installation"
+                            Write-LogEntry -logEntry "AppxPackage '$($removeApp)' failed to register. A reboot may be required to complete the installation" -logID $logID -severity 3
+                        }
+                    }
+                    catch {
+                        Write-Warning -Message "Re-registering AppxPackage '$($removeApp)' failed: $($_.Exception.Message)"
+                        Write-LogEntry -logEntry "Re-registering AppxPackage '$($removeApp)' failed: $($_.Exception.Message)" -logID $logID -severity 3
+                    }
+                }
+                else {
+                    Write-Host "Success: The '$($winGetAppName)' AppxPackage was also found using the Get-appxPackage `'-AllUsers`' switch"
+                    Write-LogEntry -logEntry "Success: The '$($winGetAppName)' AppxPackage was also found using the Get-appxPackage `'-AllUsers`' switch" -logID $logID
+                    }
             }
             else {
-                Write-Warning -Message "Error: The '$($winGetAppName)' app, with Id '$($winGetApp)', did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
-                Write-LogEntry -logEntry "Error: The '$($winGetAppName)' app, with Id '$($winGetApp)', did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID -severity 3
+                Write-Warning -Message "Error: The '$($winGetAppName)' app did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information"
+                Write-LogEntry -logEntry "Error: The '$($winGetAppName)' app, did not install succesfully. Check the Winget logs at 'C:\Windows\Temp\WinGet\defaultState' for more information" -logID $logID -severity 3
             }
         }
     }
