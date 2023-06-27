@@ -13,7 +13,7 @@
     .NOTES
     FileName:       Reset-Appx.ps1
     Created:        12th June 2023
-    Updated:        18th June 2023
+    Updated:        27th June 2023
     Author:         Ben Whitmore @ PatchMyPC (Thanks to Bryan Dam @bdam555 for assisted research and blog at https://patchtuesday.com/blog/intune-microsoft-store-integration-app-migration-failure/)
     Contact:        @byteben
     Manifest:       Company Portal manifest: https://storeedgefd.dsx.mp.microsoft.com/v9.0/packageManifests/9WZDNCRFJ3PZ
