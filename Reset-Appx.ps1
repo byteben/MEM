@@ -52,11 +52,11 @@
 
     1.06.18.0 - Bug Fixes and New Function
 
-    -   New function "Test-WinGet" added to test if WinGet is installed and working. AppXPackages will not be removed if there is an issue with the WinGet command line
+    -   New function "Test-WinGet" added to test if WinGet is installed and working. AppxPackages will not be removed if there is an issue with the WinGet command line
         -   Tests WinGet package is installed
         -   Tests WinGet.exe is working
         -   Tests if WinGet command line failure occurs because Visual C++ 14.x Redistributable is not installed
-    -   Fixed evaluation AppXProvisionedPackage results
+    -   Fixed evaluation AppxProvisionedPackage results
     -   Minor log and output bugs fixed
 
     1.06.15.0 - Bug Fixes
@@ -129,7 +129,7 @@ param(
 
 Begin {
 
-    If (([Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem -eq $false) {
+    if (([Security.Principal.WindowsIdentity]::GetCurrent()).IsSystem -eq $false) {
         Write-Error 'This script needs to run as SYSTEM'
         break
     }
@@ -158,7 +158,7 @@ Process {
         }
 
         Process {
-            If ($PSBoundParameters.ContainsKey('resetLog')) {
+            if ($PSBoundParameters.ContainsKey('resetLog')) {
                 try {
 
                     # Check if the logfile exists
@@ -172,7 +172,6 @@ Process {
         
                         # Close the StreamWriter, which also flushes the content to the file
                         $streamWriter.Close()
-        
                         Write-Host "Log file '$($logFile)' wiped"
                     }
                     else {
@@ -326,7 +325,6 @@ Process {
 
                 if ($user.UserSecurityId.sid -eq 'S-1-5-18' -or $user -like "*S-1-5-18*") {
                     $sysemStagedFound = $true
-
                     Write-Host "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed AppxPackage install by WinGet"
                     Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed AppxPackage install by WinGet" -logID $logID
                 }
@@ -375,8 +373,7 @@ Process {
             Write-LogEntry -logEntry "Removing AppxPackage '$($removeApp)'..." -logID $logID 
             Write-Host "Remove-AppxPackage -AllUsers -Package '$($removeApp)' -ErrorAction Stop"
             Write-LogEntry -logEntry "Remove-AppxPackage -AllUsers -Package '$($removeApp)' -ErrorAction Stop" -logID $logID 
-
-            Get-AppXPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
+            Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
         }
         catch [System.Exception] {
             if ( $_.Exception.Message -like "*HRESULT: 0x80073CF1*") {
@@ -430,9 +427,9 @@ Process {
 
         # Re-register AppxPackage for all users and attempt removal again
         try {
-            Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" } -ErrorAction Stop
+            Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppxManifest.xml" } -ErrorAction Stop
                 
-            If ((Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds).Result -eq 'Installed') {
+            if ((Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds).Result -eq 'Installed') {
                 Write-Host "AppxPackage '$($removeApp)' was registered succesfully"
                 Write-LogEntry -logEntry "AppxPackage '$($removeApp)' was registered succesfully" -logID $logID 
 
@@ -515,7 +512,6 @@ Process {
             Write-LogEntry -logEntry "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)'..." -logID $logID 
             Write-Host "Remove-AppxProvisionedPackage -Online -PackageName '$($removeAppxProvisionedPackageName)' -AllUsers -ErrorAction Stop"
             Write-LogEntry -logEntry "Remove-AppxProvisionedPackage -Online -PackageName '$($removeAppxProvisionedPackageName)' -AllUsers -ErrorAction Stop" -logID $logID 
-
             Remove-AppxProvisionedPackage -Online -PackageName $removeAppxProvisionedPackageName -AllUsers -ErrorAction Stop
         }
         catch [System.Exception] {
@@ -523,7 +519,6 @@ Process {
             Write-Warning -message $_.Exception.Message
             Write-LogEntry -logEntry "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed" -logID $logID -severity 3
             Write-LogEntry -logEntry $_.Exception.Message -logID $logID -severity 3
-
             $LASTEXITCODE = 1
         } 
     }
@@ -559,7 +554,6 @@ Process {
             Write-LogEntry -logEntry "The '$($winGetPackageName)' package was not found" -logID $logID  -severity 3
         }
         else {
-
             $winGetBinaryPath = Join-Path -Path $winGetPath -ChildPath $winGetBinary
 
             try {
@@ -701,7 +695,6 @@ Process {
             Write-LogEntry -logEntry "Installing '$($winGetAppName)' using the WinGet command line" -logID $logID
             Write-Host ".\winget.exe install --name '$winGetAppName' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine"
             Write-LogEntry -logEntry ".\winget.exe install --name '$winGetAppName' --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine" -logID $logID
-
             Set-Location $winGetPath
             & .\$winGetBinary install --name $winGetAppName --accept-package-agreements --accept-source-agreements --source $winGetAppSource --scope machine
         }
@@ -710,7 +703,6 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "There was an error installing '$($winGetAppName)', with Id '$($winGetAppId)', using the WinGet command line" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
-
             $LASTEXITCODE = 1
         }
         Set-Location $PSScriptRoot
@@ -793,9 +785,7 @@ Process {
                 $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
 
                 # STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install
-                If ($winGetAppTest.Result -eq 'Not Installed' -or `
-                        $testAppxPackage.Result -eq 'SYSTEM Staged' -or $testAppxPackage.Result -eq 'Not Installed') {
-                            
+                if ($winGetAppTest.Result -eq 'Not Installed' -or $testAppxPackage.Result -eq 'SYSTEM Staged' -or $testAppxPackage.Result -eq 'Not Installed') {   
                     Write-Host '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' 
                     Write-LogEntry -logEntry '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' -logID $logID
                     Write-Warning -Message "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet app install..."
@@ -824,17 +814,17 @@ Process {
                     # Keep retrying the WinGet app install until both the WinGet app and InstallWingetApp are installed correctly or the $winGetRetries value is reached
                     while ($i -le $winGetRetries -and (-not $winGetAppTest.Result -eq 'Installed' -and (-not $testAppxPackage.Result -eq 'Installed')))
                     
-                    If ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed' -or (-not $testAppxPackage.Result -eq 'Installed'))) {
-                        Write-Warning -Message "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" 
-                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempts. The maximum number of retries has been reached" -logID $logID -severity 3
-            
+                    if ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed' -or (-not $testAppxPackage.Result -eq 'Installed'))) {
+                        if ($winGetRetries -ge 2) { $count = "s" }
+                        Write-Warning -Message ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" -f $count)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" -f $count) -logID $logID -severity 3
                         $LASTEXITCODE = 1
                     }
                     else {  
 
-                        if ($i -ge 2) { $count = "s" }
-                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count)
-                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count) -logID $logID -severity 1
+                        if ($i -ge 2) { $count2 = "s" }
+                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count2)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count2) -logID $logID -severity 1
                     }
                 }
             }
