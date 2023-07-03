@@ -13,7 +13,7 @@
     .NOTES
     FileName:       Reset-Appx.ps1
     Created:        12th June 2023
-    Updated:        1st Julye 2023
+    Updated:        3rd July 2023
     Author:         Ben Whitmore @byteben
     Contributors:   Bryan Dam @bdam555 for assisted research and blog at https://patchtuesday.com/blog/intune-microsoft-store-integration-app-migration-failure/)
                     Adam Cook @codaamok for refactor advice and down the rabbit hole testing with WinGet
@@ -22,9 +22,8 @@
     
     Version History:
 
-    1.07.01.0 - Bug Fixes, Enhancements and Refactoring
+    1.07.03.0 - Bug Fixes, Enhancements and Refactoring
 
-    -   Test-WinGetBinary returns the path to the WinGet binary if it was found with a test result passed or failed
     -   Renamed variable $winGetApp to $winGetAppId to avoid confusion with the WinGet app name
     -   Refactored functions to accept value from pipeline instaead of declaring global variables
     -   Fixed an issue where testing the if the WinGet app was installed would fail because the -like operater did not evaluate the WinGet app Id correctly
@@ -37,6 +36,9 @@
         -   Test-AppxPackageUserInformation
         -   Remove-AppxProvPackage
         -   Register-AppxPackage
+    -   Add a ResetLog parameter to wipe log file
+    -   Fixed an issue where WinGet app would install but the appx package would unstage because it could not register. We now retry the register command $winGetRetries times
+    -   Fixed an issue where the the appxPackage would test as installed but it was unstaging. We now wait $appxWaitTimerSeconds seconds before testing if the appxPackage is installed after a WinGet app install
 
     1.06.27.0 - Bug Fixes and Enhancements
 
@@ -78,7 +80,7 @@
     Specify the AppxPackage and AppxProivisionedPackage to remove
     The parameter is defined at the top of the script so it can be used as an Intune Script (which does not accept params)
 
-.PARAMETER winGetAppInstall
+.PARAMETER installWingetApp
     Boolean True or False. Should an attempt be made to reinstall the app, with WinGet, after it has been removed
 
 .PARAMETER winGetAppId
@@ -98,7 +100,7 @@
 param(
     [Parameter(Mandatory = $false)]
     [string]$removeApp = 'Microsoft.CompanyPortal',
-    [bool]$winGetAppInstall = $true,
+    [bool]$installWingetApp = $true,
     [string]$winGetAppId = '9WZDNCRFJ3PZ',
     [string]$winGetAppName = 'Company Portal',
     [string]$winGetAppSource = 'msstore',
@@ -106,6 +108,7 @@ param(
     [string]$winGetBinary = 'winget.exe',
     [int]$winGetRetries = 10,
     [int]$appxWaitTimerSeconds = 30,
+    [bool]$resetLog = $true,
     [string]$logID = 'Main'
 )
 
@@ -129,7 +132,8 @@ Process {
             [string]$logFile = "$($env:ProgramData)\Microsoft\IntuneManagementExtension\Logs\Reset-Appx.log",
             [ValidateSet(1, 2, 3, 4)]
             [string]$severity = 4,
-            [string]$component = [string]::Format('{0}:{1}', $logID, $($MyInvocation.ScriptLineNumber))
+            [string]$component = [string]::Format('{0}:{1}', $logID, $($MyInvocation.ScriptLineNumber)),
+            [switch]$resetLog
         )
 
         Begin {
@@ -139,6 +143,31 @@ Process {
         }
 
         Process {
+            If ($PSBoundParameters.ContainsKey('resetLog')) {
+                try {
+
+                    # Check if the logfile exists
+                    if (Test-Path -Path $logFile) {
+
+                        # Create a StreamWriter instance and open the file for writing
+                        $streamWriter = New-Object -TypeName System.IO.StreamWriter -ArgumentList $logFile
+        
+                        # Write an empty string to the file without the append parameter
+                        $streamWriter.Write("")
+        
+                        # Close the StreamWriter, which also flushes the content to the file
+                        $streamWriter.Close()
+        
+                        Write-Host "Log file '$($logFile)' wiped"
+                    }
+                    else {
+                        Write-Host "Log file not found at '$($logFile)'"
+                    }
+                }
+                catch {
+                    Write-Error -Message "Unable to wipe log file. Error message: $($_.Exception.Message)"
+                }
+            }
             
             try {
 
@@ -169,6 +198,7 @@ Process {
             [string]$logID = $($MyInvocation.MyCommand).Name,
             [Parameter(Mandatory = $true, ValuefromPipeline = $true)]
             [string]$removeApp,
+            [Parameter(Mandatory = $false, ValuefromPipeline = $true)]
             [int]$appxWaitTimerSeconds
         )
 
@@ -179,58 +209,69 @@ Process {
         Write-LogEntry -logEntry "Get-AppxPackage -AllUsers | Where-Object { `$_.Name -eq '$($removeApp)' } -ErrorAction Stop" -logID $logID
 
         try {
-
             $testAppxPackage = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } -ErrorAction Stop
 
             if ($testAppxPackage.Name -eq $removeapp) {
                 Write-Host "The '$($removeApp)' AppxPackage was found"
                 Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage was found" -logID $logID
 
-                # Check if the AppxPackage is installed for the SYSTEM account and staged
-                Test-appxPackageUserInformation -PackageUserInformation $testAppxPackage.PackageUserInformation -removeApp $removeApp
+                if ($PSBoundParameters.ContainsKey('appxWaitTimerSeconds')) {
 
-                try {
+                    try {
 
-                    # Wait and check again to ensure the appxPackage is not cleaning up after a failed staging
-                    Write-Host "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging"
-                    Write-LogEntry -logEntry "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging" -logID $logID
+                        # Wait and check again to ensure the appxPackage is not cleaning up after a failed staging
+                        Write-Host "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging"
+                        Write-LogEntry -logEntry "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging" -logID $logID
                 
-                    # Timer to wait for appx staging cleanup
-                    for ($t = $appxWaitTimerSeconds; $t -ge 0; $t--) {
-                        Write-Host -NoNewLine "$t.."
-                        Start-Sleep -Seconds 1
+                        # Timer to wait for appx staging cleanup
+                        for ($t = $appxWaitTimerSeconds; $t -ge 0; $t--) {
+                            Write-Host -NoNewLine "$t.."
+                            Start-Sleep -Seconds 1
+                        }
+
+                        if ($t -eq 0) {
+                            Write-Host "Waited '$($appxWaitTimerSeconds)' seconds for appx staging cleanup"
+                            Write-LogEntry -logEntry "Waited '$($appxWaitTimerSeconds)' seconds for appx staging cleanup" -logID $logID
+                        }
+
+                        $testAppxPackage = $null
+                        $testAppxPackage = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } -ErrorAction Stop
+
+                        if ($testAppxPackage.Name -eq $removeapp) {
+                            $testAppxPackageOnWaitFailed = $true
+                            Write-Host "The '$($removeApp)' AppxPackage was still found after waiting '$($appxWaitTimerSeconds)' seconds"
+                            Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage was still found after waiting '$($appxWaitTimerSeconds)' seconds" -logID $logID
+                        }
+                        else {
+                            Write-Warning -Message "The '$($removeApp)' AppxPackage was not found after waiting '$($appxWaitTimerSeconds)' seconds. It may have been removed up after appx staging cleanup"
+                            Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage was not found after waiting '$($appxWaitTimerSeconds)' seconds. It may have been removed up after appx staging cleanup" -logID $logID -severity 2
+
+                            return @{Result = 'Not Installed'; Users = $null }
+                        }
                     }
+                    catch {
+                        Write-Warning -Message "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed"
+                        Write-Warning -Message "$($_.Exception.Message)"
+                        Write-LogEntry -logEntry "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
+                        Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
 
-                    if ($t -eq 0) {
-                        Write-Host "Waited '$($appxWaitTimerSeconds)' seconds for appx staging cleanup"
-                        Write-LogEntry -logEntry "Waited '$($appxWaitTimerSeconds)' seconds for appx staging cleanup" -logID $logID
+                        return @{Result = 'Fatal Error'; Users = $null }
+                        $LASTEXITCODE = 1
                     }
-                    
-                    $testAppxPackage = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } -ErrorAction Stop
+                }
 
-                    if ($testAppxPackage.Name -eq $removeapp) {
-                        Write-Host "The '$($removeApp)' AppxPackage was found after waiting '$($appxWaitTimerSeconds)' seconds for appx staging cleanup"
-                        Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage was found after waiting '$($appxWaitTimerSeconds)' seconds for appx staging cleanup" -logID $logID
+                if (-not $testAppxPackageOnWaitFailed) {
 
-                        # Check if the AppxPackage is installed for the SYSTEM account and staged
-                        Test-appxPackageUserInformation -PackageUserInformation $testAppxPackage.PackageUserInformation -removeApp $removeApp   
+                    # Check if the AppxPackage is installed for the SYSTEM account and staged
+                    $testAppxPackageUserInformation = Test-appxPackageUserInformation -PackageUserInformation $testAppxPackage.PackageUserInformation -removeApp $removeApp 
+                        
+                    if (-not([string]::IsNullOrEmpty($testAppxPackageUserInformation.Result))) {
+                        return @{Result = 'Installed'; Users = $testAppxPackageUserInformation.Users }
                     }
                     else {
-                        Write-Warning -Message "The '$($removeApp)' AppxPackage was not found after waiting '$($appxWaitTimerSeconds)' seconds for appx staging cleanup"
-                        Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage was not found after waiting '$($appxWaitTimerSeconds)' seconds for appx staging cleanup" -logID $logID -severity 3
-
                         return @{Result = 'Not Installed'; Users = $null }
                     }
-                }
-                catch {
-                    Write-Warning -Message "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed"
-                    Write-Warning -Message "$($_.Exception.Message)"
-                    Write-LogEntry -logEntry "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
-                    Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
-
-                    return @{Result = 'Fatal Error'; Users = $null }
-                    $LASTEXITCODE = 1
-                }
+                } 
             }
             else {
                 Write-Host "The '$($removeApp)' AppxPackage is not installed"
@@ -320,7 +361,7 @@ Process {
             Write-Host "Remove-AppxPackage -AllUsers -Package '$($removeApp)' -ErrorAction Stop"
             Write-LogEntry -logEntry "Remove-AppxPackage -AllUsers -Package '$($removeApp)' -ErrorAction Stop" -logID $logID 
 
-            Remove-AppxPackage -AllUsers -Package $removeApp -ErrorAction Stop
+            Get-AppXPackage -AllUsers | Where-Object { $_.Name -eq $removeApp } | Remove-AppxPackage -AllUsers -ErrorAction Stop
         }
         catch [System.Exception] {
             if ( $_.Exception.Message -like "*HRESULT: 0x80073CF1*") {
@@ -661,92 +702,129 @@ Process {
     }
 
     # Initial logging
-    Write-Host '** Starting processing the script' 
-    Write-LogEntry -logEntry '** Starting processing the script' -logID $logID 
- 
-    # Call Functions  
-    $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
-    $testAppxProvisionedPackage = Test-AppxProvisionedPackage -removeApp $removeApp
 
-    # Remove AppxPackage
+    # Check if the log file needs to be reset
+    if ($resetLog) {
+        Write-Host '** Log file reset by parameter -resetLog' 
+        Write-LogEntry -logEntry '** Log file reset by parameter' -logID $logID -ResetLog
+    }
+   
+    Write-Host '** Starting processing the script' 
+    Write-LogEntry -logEntry '** Starting processing the script' -logID $logID -severity 2
+ 
+    # Calling Functions  
+
+    # STEP 1 of 6: Remove AppxPackage
+    Write-Host '### STEP 1 of 6: Remove AppxPackage ###' 
+    Write-LogEntry -logEntry '### STEP 1 of 6: Remove AppxPackage ###' -logID $logID
+    $testAppxPackage = Test-AppxPackage -removeApp $removeApp
+
     if ($testAppxPackage.Result -eq 'Installed') {
         $removeAppxPackage = Remove-AppxPkg -removeApp $removeApp
 
         # Check if AppxPackage needs registering before it can be removed
         if ($removeAppxPackage.Result -eq 'Failed' -and $removeAppxPackage.Reason -eq '0x80073CF1') {
-            Register-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
-        }
+            Register-AppxPackage -removeApp $removeApp
 
-        # Remove AppxProvionedPackage
-        if ($testAppxProvisionedPackage.Result -eq 'Installed') {
-            Remove-AppxProvPackage -removeApp $removeApp -removeAppxProvisionedPackageName $testAppxProvisionedPackage.PackageName
+            #Check if AppxPackage is still installed
+            $testAppxPackage = $null
+            $testAppxPackage = Test-AppxPackage -removeApp $removeApp
+
+            if ($testAppxPackage.Result -eq 'Installed') {
+
+                # Attempt removal again of the appxPackage
+                Remove-AppxPkg -removeApp $removeApp
+            }
         }
     }
-    
-    # WinGet App intent is to be installed
-    if ($winGetAppInstall -eq $true) {
+
+    # STEP 2 of 6: Remove AppxProvionedPackage
+    Write-Host '### STEP 2 of 6: Remove AppxProvionedPackage ###' 
+    Write-LogEntry -logEntry '### STEP 2 of 6: Remove AppxProvionedPackage ###' -logID $logID
+    $testAppxProvisionedPackage = Test-AppxProvisionedPackage -removeApp $removeApp
+
+    if ($testAppxProvisionedPackage.Result -eq 'Installed') {
+        Remove-AppxProvPackage -removeApp $removeApp -removeAppxProvisionedPackageName $testAppxProvisionedPackage.PackageName
+    }
+
+    # STEP 3 of 6: WinGet App intent is to be installed
+    Write-Host '### STEP 3 of 6: WinGet App intent is to be installed ###' 
+    Write-LogEntry -logEntry '### STEP 3 of 6: WinGet App intent is to be installed ###' -logID $logID
+    if ($installWingetApp -eq $true) {
         $winGetBinaryTestResult = Test-WinGetBinary -winGetBinary $winGetBinary -winGetPackageName $winGetPackageName
        
-        if ($winGetBinaryTestResult.Result -eq 'Installed') {
+        if ($winGetBinaryTestResult.Result -eq 'Passed') {
             $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
            
             if ($winGetAppTest.Result -eq 'Not Installed') {
 
                 # WinGet App is not installed. Install WinGet App
                 Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
-            }
-        } 
+            
+                # STEP 4 of 6: Test if WinGet App install installed the appxPackage
+                Write-Host '### STEP 4 of 6: Test if WinGet App install installed the appxPackage ###' 
+                Write-LogEntry -logEntry '### STEP 4 of 6: Test if WinGet App install installed the appxPackage ###' -logID $logID
 
-        # Test if WinGet App install retry is required
-        $testAppxPackage = $null
-        $winGetBinaryTestResult = $null
-        $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
-        $winGetBinaryTestResult = Test-WinGetBinary -winGetBinary $winGetBinary -winGetPackageName $winGetPackageName
+                # Check if the appxPackage registered correctly but wait for the interval $appxWaitTimerSeconds incase it is being removed because of failed WinGet install
+                Write-Host "The WinGet app '$($winGetAppName)' install was attempted. Checking if the appxPackage registered correctly..."
+                Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)' install was attempted. Checking if the appxPackage registered correctly..." -logID $logID
+                $testAppxPackage = $null
+                $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
 
-        If ($winGetBinaryTestResult.Result -eq 'Not Installed' -or `
-                $testAppxPackage.Result -eq 'SYSTEM Staged' -or $testAppxPackage.Result -eq 'Not Installed') {
-
-            Write-Warning -Message "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet App install..."
-            Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet App install..." -logID $logID -severity 2
-
-            # Retry WinGet App install
-            $i = 1
-
-            do {
-                Write-Host "Retry attempt $i of $winGetRetries"
-                Write-LogEntry -logEntry "Retry attempt $i of $winGetRetries" -logID $logID -severity 2
-    
-                # Test if WinGet App is installed
+                # STEP 5 of 6: Check if the WinGet app is installed correctly
+                Write-Host '### STEP 5 of 6: Check if the WinGet app is installed correctly ###' 
+                Write-LogEntry -logEntry '### STEP 5 of 6: Check if the WinGet app is installed correctly ###' -logID $logID
+                $winGetAppTest = $null
                 $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
-    
-                # WinGet App is not installed. Install WinGet App
-                if ($winGetAppTest.Result -eq 'Not Installed') {
-                    $i++
-                    Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
-                    $winGetAppTest = $null
-                    $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
+
+                # STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install
+                Write-Host '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' 
+                Write-LogEntry -logEntry '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' -logID $logID
+                If ($winGetAppTest.Result -eq 'Not Installed' -or `
+                        $testAppxPackage.Result -eq 'SYSTEM Staged' -or $testAppxPackage.Result -eq 'Not Installed') {
+
+                    Write-Warning -Message "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet app install..."
+                    Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet app install..." -logID $logID -severity 2
+
+                    # Retry Loop. Number based on $winGetRetries value
+                    $i = 1
+
+                    do {
+                        Write-Host "Retry attempt $i of $winGetRetries"
+                        Write-LogEntry -logEntry "Retry attempt $i of $winGetRetries" -logID $logID -severity 2
+       
+                        # WinGet App is not installed. Install WinGet App
+                        if ($winGetAppTest.Result -eq 'Not Installed') {
+                            $i++
+                            Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
+                            $winGetAppTest = $null
+                            $testAppxPackage = $null
+                            $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
+                            $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
+                        }
+                    }
+
+                    # Keep retrying the WinGet app install until both the WinGet app and appxPackage are installed correctly or the $winGetRetries value is reached
+                    while ($i -le $winGetRetries -and (-not $winGetAppTest.Result -eq 'Installed' -and (-not $testAppxPackage.Result -eq 'Installed')))
+
+                    If ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed' -or (-not $testAppxPackage.Result -eq 'Installed'))) {
+                        Write-Warning -Message "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached"
+                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached" -logID $logID -severity 3
+            
+                        $LASTEXITCODE = 1
+                    }
+                    else {  
+                        Write-Host "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts"
+                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts" -logID $logID -severity 1
+                    }
                 }
             }
-
-            while ($i -le $winGetRetries -and (-not $winGetAppTest.Result -eq 'Installed'))
-
-            If ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed')) {
-                Write-Warning -Message "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached"
-                Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached" -logID $logID -severity 3
-            
-                $LASTEXITCODE = 1
-
-            }
-            elseif ($winGetAppTest -eq 'Installed') {  
-                Write-Host "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts"
-                Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts" -logID $logID -severity 1
-            }
-        }
+        } 
     }
 }
 end {
 
-    # Complete
+    # Complete Script
     Write-Output "Finished processing the script"
     Write-LogEntry -logEntry "Finished processing the script" -logID $logID
     Set-Location $PSScriptRoot
