@@ -832,7 +832,7 @@ Process {
                     }
                     else {  
 
-                        if ($it -ge 2) { $count = "s" }
+                        if ($i -ge 2) { $count = "s" }
                         Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count)
                         Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count) -logID $logID -severity 1
                     }
