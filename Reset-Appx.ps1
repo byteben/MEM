@@ -25,7 +25,7 @@
     1.07.03.0 - Bug Fixes, Enhancements and Refactoring
 
     -   Renamed variable $winGetApp to $winGetAppId to avoid confusion with the WinGet app name
-    -   Refactored functions to accept value from pipeline instaead of declaring global variables
+    -   Refactored functions to accept value from pipeline instead of declaring global variables
     -   Fixed an issue where testing the if the WinGet app was installed would fail because the -like operater did not evaluate the WinGet app Id correctly
     -   New functions:- 
         -   Test-AppxProvisionedPackage
@@ -91,6 +91,21 @@
 
 .PARAMETER winGetAppSource
     Specify WinGet source to use. Typically this will be msstore for apps with the issue outlined in the description of this script
+
+.PARAMETER winGetPackageName
+    Specify WinGet package name in Windwows. This is normally 'Microsoft.DesktopAppInstaller'
+
+.PARAMETER winGetBinary
+    Specify WinGet binary name. 99.9999% this will always be 'winget.exe'
+
+.PARAMETER winGetRetries
+    Specify how many times to retry the app using WinGet when installation errors occur
+
+.PARAMETER appxWaitTimerSeconds
+    Specify how long to wait to test the appxPackage after a WinGet app install was attempted. Sometimes appxpackages detect as installed but are not ready to use because registration failed
+
+.PARAMETER resetLog
+    Specify as $true to rest the log file.
 
 .EXAMPLE
     .\Reset-Appx.ps1
