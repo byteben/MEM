@@ -10,7 +10,18 @@
     AppxPackage removal can fail if the app was installed from the Microsoft Store. This script will re-register the app for All Users in that instance to allow for removal
     If the $installWingetApp parameter is $true, WinGet will then install the app in the scope of the machine and retry if failures are encountered
 
-    .NOTES
+    ---------------------------------------------------------------------------------
+    LEGAL DISCLAIMER
+
+    The PowerShell script provided is shared with the community as-is
+    The author and co-author(s) make no warranties or guarantees regarding its functionality, reliability, or suitability for any specific purpose
+    Please note that the script may need to be modified or adapted to fit your specific environment or requirements
+    It is recommended to thoroughly test the script in a non-production environment before using it in a live or critical system
+    The author and co-author(s) cannot be held responsible for any damages, losses, or adverse effects that may arise from the use of this script
+    You assume all risks and responsibilities associated with its usage
+    ---------------------------------------------------------------------------------
+
+.NOTES
     FileName:       Reset-Appx.ps1
     Created:        12th June 2023
     Updated:        3rd July 2023
@@ -823,8 +834,8 @@ Process {
                     else {  
 
                         if ($i -ge 2) { $count2 = "s" }
-                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count2)
-                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count2) -logID $logID -severity 1
+                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}'" -f $count2)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}'" -f $count2) -logID $logID -severity 1
                     }
                 }
             }
