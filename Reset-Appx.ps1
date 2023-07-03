@@ -827,15 +827,15 @@ Process {
                     
                     if ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed' -or (-not $testAppxPackage.Result -eq 'Installed'))) {
                         if ($winGetRetries -ge 2) { $count = "s" }
-                        Write-Warning -Message ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" -f $count)
-                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" -f $count) -logID $logID -severity 3
+                        Write-Warning -Message ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries)' retry attempt{0}. The maximum number of retries has been reached" -f $count)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries)' retry attempt{0}. The maximum number of retries has been reached" -f $count) -logID $logID -severity 3
                         $LASTEXITCODE = 1
                     }
                     else {  
 
                         if ($i -ge 2) { $count2 = "s" }
-                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}'" -f $count2)
-                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}'" -f $count2) -logID $logID -severity 1
+                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i)' retry attempt{0}" -f $count2)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i)' retry attempt{0}" -f $count2) -logID $logID -severity 1
                     }
                 }
             }
