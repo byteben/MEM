@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
-    Remove a built-in modern app from Windows, for All Users, and reinstall using WinGet
+    Remove a built-in modern app from Windows, for All Users, and reinstall (if requested) using WinGet
     
 .DESCRIPTION
-    This script will remove a specific built-in AppXPackage, for All Users, and also the AppXProvisionedPackage if it exists
+    This script will remove a specific built-in AppxPackage, for All Users, and also the AppxProvisionedPackage if it exists
     When deploying apps from the new store, via Intune, in the SYSTEM context, an error appears for the deployment if the same app was previous deployed in the USER context
     "The application was not detected after installation completed successfully (0x87D1041C)"
     This script will remove all existing instances of the app so the app from Intune can be installed sucessfully
     AppxPackage removal can fail if the app was installed from the Microsoft Store. This script will re-register the app for All Users in that instance to allow for removal
-    WinGet will then install the app in the scope of the machine
+    If the $installWingetApp parameter is $true, WinGet will then install the app in the scope of the machine and retry if failures are encountered
 
     .NOTES
     FileName:       Reset-Appx.ps1
@@ -38,7 +38,7 @@
         -   Register-AppxPackage
     -   Add a ResetLog parameter to wipe log file
     -   Fixed an issue where WinGet app would install but the appx package would unstage because it could not register. We now retry the register command $winGetRetries times
-    -   Fixed an issue where the the appxPackage would test as installed but it was unstaging. We now wait $appxWaitTimerSeconds seconds before testing if the appxPackage is installed after a WinGet app install
+    -   Fixed an issue where the the AppxPackage would test as installed but it was unstaging. We now wait $appxWaitTimerSeconds seconds before testing if the AppxPackage is installed after a WinGet app install
 
     1.06.27.0 - Bug Fixes and Enhancements
 
@@ -102,10 +102,10 @@
     Specify how many times to retry the app using WinGet when installation errors occur
 
 .PARAMETER appxWaitTimerSeconds
-    Specify how long to wait to test the appxPackage after a WinGet app install was attempted. Sometimes appxpackages detect as installed but are not ready to use because registration failed
+    Specify how long to wait to test the AppxPackage after a WinGet app install was attempted. Sometimes appxpackages detect as installed but are not ready to use because registration failed
 
 .PARAMETER resetLog
-    Specify as $true to rest the log file.
+    Set to $true to rest the log file.
 
 .EXAMPLE
     .\Reset-Appx.ps1
@@ -123,7 +123,7 @@ param(
     [string]$winGetBinary = 'winget.exe',
     [int]$winGetRetries = 10,
     [int]$appxWaitTimerSeconds = 30,
-    [bool]$resetLog = $true,
+    [bool]$resetLog = $false,
     [string]$logID = 'Main'
 )
 
@@ -234,9 +234,9 @@ Process {
 
                     try {
 
-                        # Wait and check again to ensure the appxPackage is not cleaning up after a failed staging
-                        Write-Host "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging"
-                        Write-LogEntry -logEntry "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the appxPackage is not cleaning up after a failed staging" -logID $logID
+                        # Wait and check again to ensure the AppxPackage is not cleaning up after a failed staging
+                        Write-Host "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the AppxPackage is not cleaning up after a failed staging"
+                        Write-LogEntry -logEntry "Waiting '$($appxWaitTimerSeconds)' seconds to repeat the test '$($removeApp)' to ensure the AppxPackage is not cleaning up after a failed staging" -logID $logID
                 
                         # Timer to wait for appx staging cleanup
                         for ($t = $appxWaitTimerSeconds; $t -ge 0; $t--) {
@@ -316,8 +316,8 @@ Process {
             [array]$packageUserInformation
         )
 
-        # Check if the appxPackage is staged for the SYSTEM account which would indicate a failed appx install
-        # Create an array to store any users found with the appxPackage installed
+        # Check if the AppxPackage is staged for the SYSTEM account which would indicate a failed appx install
+        # Create an array to store any users found with the AppxPackage installed
         $userList = @()
                         
         try {
@@ -327,8 +327,8 @@ Process {
                 if ($user.UserSecurityId.sid -eq 'S-1-5-18' -or $user -like "*S-1-5-18*") {
                     $sysemStagedFound = $true
 
-                    Write-Host "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed appxPackage install by WinGet"
-                    Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed appxPackage install by WinGet" -logID $logID
+                    Write-Host "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed AppxPackage install by WinGet"
+                    Write-LogEntry -logEntry "The '$($removeApp)' AppxPackage is staged for the SYSTEM account which could indicate a failed AppxPackage install by WinGet" -logID $logID
                 }
                 
                 # If an array is returned without columns regex the string and return only the username
@@ -747,7 +747,7 @@ Process {
 
             if ($testAppxPackage.Result -eq 'Installed') {
 
-                # Attempt removal again of the appxPackage
+                # Attempt removal again of the AppxPackage
                 Remove-AppxPkg -removeApp $removeApp
             }
         }
@@ -763,9 +763,9 @@ Process {
     }
 
     # STEP 3 of 6: WinGet App intent is to be installed
-    Write-Host '### STEP 3 of 6: WinGet App intent is to be installed ###' 
-    Write-LogEntry -logEntry '### STEP 3 of 6: WinGet App intent is to be installed ###' -logID $logID
     if ($installWingetApp -eq $true) {
+        Write-Host '### STEP 3 of 6: WinGet App intent is to be installed ###' 
+        Write-LogEntry -logEntry '### STEP 3 of 6: WinGet App intent is to be installed ###' -logID $logID
         $winGetBinaryTestResult = Test-WinGetBinary -winGetBinary $winGetBinary -winGetPackageName $winGetPackageName
        
         if ($winGetBinaryTestResult.Result -eq 'Passed') {
@@ -776,13 +776,13 @@ Process {
                 # WinGet App is not installed. Install WinGet App
                 Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
             
-                # STEP 4 of 6: Test if WinGet App install installed the appxPackage
-                Write-Host '### STEP 4 of 6: Test if WinGet App install installed the appxPackage ###' 
-                Write-LogEntry -logEntry '### STEP 4 of 6: Test if WinGet App install installed the appxPackage ###' -logID $logID
+                # STEP 4 of 6: Test if WinGet App install installed the AppxPackage
+                Write-Host '### STEP 4 of 6: Test if WinGet App install installed the AppxPackage ###' 
+                Write-LogEntry -logEntry '### STEP 4 of 6: Test if WinGet App install installed the AppxPackage ###' -logID $logID
 
-                # Check if the appxPackage registered correctly but wait for the interval $appxWaitTimerSeconds incase it is being removed because of failed WinGet install
-                Write-Host "The WinGet app '$($winGetAppName)' install was attempted. Checking if the appxPackage registered correctly..."
-                Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)' install was attempted. Checking if the appxPackage registered correctly..." -logID $logID
+                # Check if the AppxPackage registered correctly but wait for the interval $appxWaitTimerSeconds incase it is being removed because of failed WinGet install
+                Write-Host "The WinGet app '$($winGetAppName)' install was attempted. Checking if the AppxPackage registered correctly..."
+                Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)' install was attempted. Checking if the AppxPackage registered correctly..." -logID $logID
                 $testAppxPackage = $null
                 $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
 
@@ -793,11 +793,11 @@ Process {
                 $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
 
                 # STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install
-                Write-Host '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' 
-                Write-LogEntry -logEntry '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' -logID $logID
                 If ($winGetAppTest.Result -eq 'Not Installed' -or `
                         $testAppxPackage.Result -eq 'SYSTEM Staged' -or $testAppxPackage.Result -eq 'Not Installed') {
-
+                            
+                    Write-Host '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' 
+                    Write-LogEntry -logEntry '### STEP 6 of 6: If either the WinGet App or AppxPackage is not installed correctly, retry the WinGet App install ###' -logID $logID
                     Write-Warning -Message "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet app install..."
                     Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', is not installed correctly. Retrying the WinGet app install..." -logID $logID -severity 2
 
@@ -809,28 +809,32 @@ Process {
                         Write-LogEntry -logEntry "Retry attempt $i of $winGetRetries" -logID $logID -severity 2
        
                         # WinGet App is not installed. Install WinGet App
-                        if ($winGetAppTest.Result -eq 'Not Installed') {
+                        Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
+                        $winGetAppTest = $null
+                        $testAppxPackage = $null
+                        $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
+                        $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
+
+                        #Increment retry counter
+                        if ($i -le $winGetRetries -and (-not $winGetAppTest.Result -eq 'Installed' -and (-not $testAppxPackage.Result -eq 'Installed'))) {
                             $i++
-                            Install-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
-                            $winGetAppTest = $null
-                            $testAppxPackage = $null
-                            $winGetAppTest = Test-WinGetApp -winGetAppName $winGetAppName -winGetAppId $winGetAppId -winGetAppSource $winGetAppSource -winGetPath $winGetBinaryTestResult.winGetPath -winGetBinary $winGetBinary
-                            $testAppxPackage = Test-AppxPackage -removeApp $removeApp -appxWaitTimerSeconds $appxWaitTimerSeconds
                         }
                     }
 
-                    # Keep retrying the WinGet app install until both the WinGet app and appxPackage are installed correctly or the $winGetRetries value is reached
+                    # Keep retrying the WinGet app install until both the WinGet app and InstallWingetApp are installed correctly or the $winGetRetries value is reached
                     while ($i -le $winGetRetries -and (-not $winGetAppTest.Result -eq 'Installed' -and (-not $testAppxPackage.Result -eq 'Installed')))
-
+                    
                     If ($i -eq $winGetRetries -and (-not $winGetAppTest -eq 'Installed' -or (-not $testAppxPackage.Result -eq 'Installed'))) {
-                        Write-Warning -Message "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached"
-                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) attempts. The maximum number of retries has been reached" -logID $logID -severity 3
+                        Write-Warning -Message "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempt{0}. The maximum number of retries has been reached" 
+                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries) retry attempts. The maximum number of retries has been reached" -logID $logID -severity 3
             
                         $LASTEXITCODE = 1
                     }
                     else {  
-                        Write-Host "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts"
-                        Write-LogEntry -logEntry "The WinGet app '$($winGetAppName)', installed correctly after '$($i) attempts" -logID $logID -severity 1
+
+                        if ($it -ge 2) { $count = "s" }
+                        Write-Host ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count)
+                        Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', installed correctly after '$($i) retry attempt{0}" -f $count) -logID $logID -severity 1
                     }
                 }
             }
