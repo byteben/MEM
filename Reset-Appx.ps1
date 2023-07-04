@@ -33,6 +33,10 @@
     
     Version History:
 
+    1.07.03.01 - Bug Fixes
+
+    -   Fixed an issue with exit codes not being returned correctly
+
     1.07.03.0 - Bug Fixes, Enhancements and Refactoring
 
     -   Renamed variable $winGetApp to $winGetAppId to avoid confusion with the WinGet app name
@@ -279,9 +283,10 @@ Process {
                         Write-Warning -Message "$($_.Exception.Message)"
                         Write-LogEntry -logEntry "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
                         Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+                        $global:exitCode = 1
 
                         return @{Result = 'Fatal Error'; Users = $null }
-                        $LASTEXITCODE = 1
+                        
                     }
                 }
 
@@ -310,9 +315,9 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "Error while running the Get-AppxPackage command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+            $global:exitCode = 1
 
-            return @{Result = 'Fatal Error'; Users = $null }
-            $LASTEXITCODE = 1
+            return @{Result = 'Fatal Error'; Users = $null }  
         }
     }
 
@@ -362,9 +367,9 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "Error while running the Test-AppxPackageUserInformation command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+            $global:exitCode = 1
 
             return @{Result = 'Fatal Error'; Users = $null }
-            $LASTEXITCODE = 1
         }
     }
 
@@ -458,9 +463,9 @@ Process {
             Write-Warning -Message $_.Exception.Message
             Write-LogEntry -logEntry "Re-registering AppxPackage '$($removeApp)' failed" -logID $logID -severity 3
             Write-LogEntry -logEntry $_.Exception.Message -logID $logID -severity 3
+            $global:exitCode = 1
 
             return @{Result = 'Fatal Error' }
-            $LASTEXITCODE = 1
         }
     }
 
@@ -500,9 +505,9 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "Error while running the Get-AppxProvisionedPackage command line to check if '$($removeApp)' is installed" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+            $global:exitCode = 1
 
             return @{Result = 'Fatal Error'; PackageName = $null }
-            $LASTEXITCODE = 1
         }
     }
 
@@ -530,7 +535,7 @@ Process {
             Write-Warning -message $_.Exception.Message
             Write-LogEntry -logEntry "Removing AppxProvisionedPackage '$($removeAppxProvisionedPackageName)' failed" -logID $logID -severity 3
             Write-LogEntry -logEntry $_.Exception.Message -logID $logID -severity 3
-            $LASTEXITCODE = 1
+            $global:exitCode = 1
         } 
     }
 
@@ -590,9 +595,10 @@ Process {
         if ($testWinGetBinaryPathFail -or $testWinGetPathFail) {
             Write-Warning "The '$($winGetPackageName)' package was not found or the WinGet binary was not found at '$($winGetBinaryPath)'. Cannot continue"
             Write-LogEntry -logEntry "The '$($winGetPackageName)' package was not found or the WinGet binary was not found at '$($winGetBinaryPath)'. Cannot continue" -logID $logID -severity 3
+            $global:exitCode = 1
 
             return @{Result = 'Fatal Error'; winGetPath = $null }
-            $LASTEXITCODE = 1
+            
         }
         else {
             
@@ -681,9 +687,10 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "Error while running the WinGet command line to check if $($winGetAppName) is already installed" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
+            $global:exitCode = 1
             
             return @{Result = 'Fatal Error' }
-            $LASTEXITCODE = 1
+
         }
         Set-Location $PSScriptRoot
     }
@@ -714,7 +721,7 @@ Process {
             Write-Warning -Message "$($_.Exception.Message)"
             Write-LogEntry -logEntry "There was an error installing '$($winGetAppName)', with Id '$($winGetAppId)', using the WinGet command line" -logID $logID -severity 3
             Write-LogEntry -logEntry "$($_.Exception.Message)" -logID $logID -severity 3
-            $LASTEXITCODE = 1
+            $global:exitCode = 1
         }
         Set-Location $PSScriptRoot
     }
@@ -829,7 +836,7 @@ Process {
                         if ($winGetRetries -ge 2) { $count = "s" }
                         Write-Warning -Message ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries)' retry attempt{0}. The maximum number of retries has been reached" -f $count)
                         Write-LogEntry -logEntry ("The WinGet app '$($winGetAppName)', did not install correctly after '$($winGetRetries)' retry attempt{0}. The maximum number of retries has been reached" -f $count) -logID $logID -severity 3
-                        $LASTEXITCODE = 1
+                        $global:exitCode = 1
                     }
                     else {  
 
@@ -847,5 +854,13 @@ end {
     # Complete Script
     Write-Output "Finished processing the script"
     Write-LogEntry -logEntry "Finished processing the script" -logID $logID
+
+    # Reset the location
     Set-Location $PSScriptRoot
+
+    If ($global:exitCode -eq 1) {
+        Write-Warning -Message "The script completed with errors. Please check the log file for more information"
+        Write-LogEntry -logEntry "The script completed with errors. Please check the log file for more information" -logID $logID -severity 3
+        Exit 1
+    } 
 }
