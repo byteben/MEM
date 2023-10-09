@@ -659,12 +659,12 @@ Process {
         )
         try {
             Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetAppId)'..."
-            Write-Host "winget.exe list --id $($winGetAppId) --source $($winGetAppSource) --accept-source-agreements"
+            Write-Host "winget.exe list --id $($winGetAppId) --source $($winGetAppSource) --scope machine --accept-source-agreements"
             Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetAppId)'..." -logID $logID
-            Write-LogEntry -logEntry "winget.exe list --id '$($winGetAppId)' --source $($winGetAppSource) --accept-source-agreements" -logID $logID 
+            Write-LogEntry -logEntry "winget.exe list --id '$($winGetAppId)' --source $($winGetAppSource) --scope machine --accept-source-agreements" -logID $logID 
 
             Set-Location $winGetPath
-            $winGetTest = & .\$winGetBinary list --id $winGetAppId --source $winGetAppSource --accept-source-agreements
+            $winGetTest = & .\$winGetBinary list --id $winGetAppId --source $winGetAppSource --scope machine --accept-source-agreements
                 
             foreach ($line in $winGetTest) {
                 
