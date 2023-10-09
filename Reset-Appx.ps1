@@ -554,7 +554,8 @@ Process {
         Write-LogEntry -logEntry "Testing the WinGet package and other dependancies are installed" -logID $logID
 
         try {
-            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1 -ErrorAction Stop
+            $winGetLatestVersion = ((Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).Version | ForEach-Object { [version]$_ } | Sort-Object -Descending | Select-Object -First 1 -ErrorAction Stop).ToString()
+            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName -and $_.Version -eq $winGetLatestVersion }).InstallLocation
         }
         catch {
             $testWinGetPathFail = $true
