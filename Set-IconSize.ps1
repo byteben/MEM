@@ -17,11 +17,20 @@ and/or fitness for a particular purpose. This script is provided 'AS IS' and the
 guarantee that the following script, macro, or code can or should be used in any situation or that 
 operation of the code will be error-free.
 
-.PARAMETER IconBackupDir
-The directory path where the icon backup will be created and the resized icon will be saved. The default value is "C:\ConfigMgrIconBackup".
+.PARAMETER SiteCode
+The ConfigMgr site code
+
+.PARAMETER ProviderMachineName
+The ConfigMgr site server
+
+.PARAMETER ApplicationName
+The name of the application to resize the icon for. The default value is "*"
 
 .PARAMETER NewWidth
 The new width of the resized icon. The default value is 110.
+
+.PARAMETER IconBackupDir
+The directory path where the icon backup will be created and the resized icon will be saved. The default value is "C:\ConfigMgrIconBackup".
 
 .EXAMPLE
 Set-IconSize.ps1 -AppName "*Microsoft*" -NewWidth 110 -IconBackupDir "E:\IconBackup" -OnlyPMPApps
@@ -41,9 +50,6 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$OnlyPMPApps
 )
-# Add type for System.Drawing to PowerShell session
-Add-Type -AssemblyName System.Drawing
-
 function New-IconBackupDir {
     param (
         [Parameter(Mandatory = $false)]
