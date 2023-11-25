@@ -143,10 +143,10 @@ function Set-IconSizeLower {
         
     # Grab the applications
     if ($OnlyPMPApps) {
-        $apps = Get-CMApplication | Where-Object { $_.LocalizedDisplayName -like $ApplicationName -and $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true -and $_.LocalizedDescription -like "Created by Patch My PC*" } 
+        $apps = Get-CMApplication -Name "*$ApplicationName*" | Where-Object {  $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true -and $_.LocalizedDescription -like "Created by Patch My PC*" } 
     }
     else {
-        $apps = Get-CMApplication | Where-Object { $_.LocalizedDisplayName -like $ApplicationName -and $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true }
+        $apps = Get-CMApplication -Name "*$ApplicationName*" | Where-Object { $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true }
     }
 
     # Grab properties to display in OGV including current icon data length
