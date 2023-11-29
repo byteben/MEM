@@ -58,7 +58,6 @@ function New-IconBackupDir {
 
     # Set icon backup directory name
     $iconDirectory = Join-Path -Path $IconBackupDir -ChildPath $dateToString
-   
     try {
 
         # Create a new directory for icon backup
@@ -101,6 +100,7 @@ function Connect-SiteServer {
     # Check Provider is valid
     if (!($ProviderMachineName -eq (Get-PSDrive -ErrorAction SilentlyContinue | Where-Object { $_.Provider -like "*CMSite*" }).Root)) {
         Write-Verbose -Message ("Could not connect to the Provider '{0}'. Did you specify the correct Site Server?" -f $iconDirectory) -Verbose
+        break
     }
     else {
 
@@ -113,8 +113,9 @@ function Connect-SiteServer {
         # Check if the site's drive is already present
         if (-not ( $SiteCode -eq (Get-PSDrive -ErrorAction SilentlyContinue | Where-Object { $_.Provider -like "*CMSite*" }).Name) ) {
             Write-Verbose -Message ("No PSDrive found for '{0}' in PSProvider CMSite for Root '{1}'. Did you specify the correct Site Code?" -f $SiteCode, $ProviderMachineName) -Verbose
+            break
         }
-        Else {
+        else {
 
             # Connect to the site's drive
             Write-Verbose -Message ("Connected to PSDrive " -f $SiteCode) -Verbose
@@ -123,8 +124,7 @@ function Connect-SiteServer {
     }
     catch {
         Write-Verbose -Message ("Warning: Could not connect to the specified provider '{0}' at site '{1}'" -f $SiteCode, $ProviderMachineName) -Verbose
-        throw
-
+        break
     }
 }
 
@@ -259,5 +259,6 @@ function Set-IconSizeLower {
 
 # Connect to the site server and set the icon size(s)
 Connect-SiteServer -SiteCode $SiteCode -ProviderMachineName $ProviderMachineName
+if (-not (Test-Path -Path $IconBackupDir)) { New-IconBackupDir -IconBackupDir $IconBackupDir}
 Set-IconSizeLower -ApplicationName $ApplicationName -IconBackupDir $IconBackupDir -NewWidth $NewWidth
 Set-Location $PSScriptRoot
