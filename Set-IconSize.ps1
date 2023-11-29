@@ -259,6 +259,6 @@ function Set-IconSizeLower {
 
 # Connect to the site server and set the icon size(s)
 Connect-SiteServer -SiteCode $SiteCode -ProviderMachineName $ProviderMachineName
-if (-not (Test-Path -Path $IconBackupDir)) { New-IconBackupDir -IconBackupDir $IconBackupDir}
+if (-not (Test-Path -Path $IconBackupDir) ) { New-IconBackupDir -IconBackupDir $IconBackupDir }
 Set-IconSizeLower -ApplicationName $ApplicationName -IconBackupDir $IconBackupDir -NewWidth $NewWidth
 Set-Location $PSScriptRoot
