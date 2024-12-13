@@ -1,0 +1,2 @@
+try { $installer = Get-ChildItem -Path (Get-Location) -Filter "*.exe" -ErrorAction Stop | Sort-Object -Property Length -Descending | Select-Object -First 1
+if ( -not $installer) { throw } else { Start-Process -FilePath $installer.FullName -ArgumentList "-sfx_o`"$($path)`" -sfx_ne -sfx_nu" -NoNewWindow -Wait } } catch { throw }

@@ -50,6 +50,7 @@ param (
     [Parameter(Mandatory = $false)]
     [switch]$OnlyPMPApps
 )
+
 function New-IconBackupDir {
     param (
         [Parameter(Mandatory = $false)]
@@ -143,7 +144,7 @@ function Set-IconSizeLower {
         
     # Grab the applications
     if ($OnlyPMPApps) {
-        $apps = Get-CMApplication -Name "*$ApplicationName*" | Where-Object {  $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true -and $_.LocalizedDescription -like "Created by Patch My PC*" } 
+        $apps = Get-CMApplication -Name "*$ApplicationName*" | Where-Object { $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true -and $_.LocalizedDescription -like "Created by Patch My PC*" } 
     }
     else {
         $apps = Get-CMApplication -Name "*$ApplicationName*" | Where-Object { $_.CIType_ID -eq 10 -and $_.IsLatest -eq $true }
@@ -154,9 +155,11 @@ function Set-IconSizeLower {
         $xml = [xml]$_.SDMPackageXML
         $singleIcon = $xml.AppMgmtDigest.Resources.Icon.Data
         $singleIconLength = $xml.AppMgmtDigest.Resources.Icon.Data.Length
-        $singleIconStream = [System.IO.MemoryStream][System.Convert]::FromBase64String($singleIcon)
-        $singleIconBitmap = [System.Drawing.Bitmap][System.Drawing.Image]::FromStream($singleIconStream)
-        $_ | Select-Object -Property CI_ID, @{Name = 'AppName'; Expression = { $_.LocalizedDisplayName } }, @{Name = 'IconLength'; Expression = { $singleIconLength } }, @{Name = 'IconWidth'; Expression = { $singleIconBitmap.Width } }
+        if ($singleIconLength -ne 0) {
+            $singleIconStream = [System.IO.MemoryStream][System.Convert]::FromBase64String($singleIcon)
+            $singleIconBitmap = [System.Drawing.Bitmap][System.Drawing.Image]::FromStream($singleIconStream)
+        }
+        $_ | Where-Object { $singleIconLength -ne 0 } | Select-Object -Property CI_ID, @{Name = 'AppName'; Expression = { $_.LocalizedDisplayName } }, @{Name = 'IconLength'; Expression = { $singleIconLength } }, @{Name = 'IconWidth'; Expression = { $singleIconBitmap.Width } }
     }
 
     $ogvResults = $appResults | Sort-Object IconLength -Descending | Out-GridView -Title "Select the Application(s) to resize the icon for" -PassThru
@@ -242,7 +245,7 @@ function Set-IconSizeLower {
                     }
                 }
                 else {
-                    Write-Verbose -Message ("Icon for '{0}' is already '{1}' the new width of '{2}'" -f $app.AppName, $(if ($iconBitmap.Width -eq $NewWidth) {'equal to'} else {'less than'}), $NewWidth) -Verbose
+                    Write-Verbose -Message ("Icon for '{0}' is already '{1}' the new width of '{2}'" -f $app.AppName, $(if ($iconBitmap.Width -eq $NewWidth) { 'equal to' } else { 'less than' }), $NewWidth) -Verbose
                     continue
                 }
             }
