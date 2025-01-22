@@ -1,0 +1,8 @@
+
+Install-Module -Name IntuneBackupAndRestore
+
+Connect-MSGraph -ForceInteractive
+
+Invoke-IntuneBackupDeviceConfiguration
+Invoke-IntuneBackupConfigurationPolicy 
+
