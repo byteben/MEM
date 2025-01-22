@@ -1,4 +1,4 @@
-# Get-IntuneReport PowerShell Script
+# Get-IntuneReport
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-v5.1+-blue?logo=powershell)  
 ![Status](https://img.shields.io/badge/Status-Preview-yellow)
