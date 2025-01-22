@@ -45,7 +45,7 @@ These JSON files can be updated to reflect the filters you want to apply to the 
   - `presence`: Optional or Required. If Required, the filter must be present in the JSON with a value.
   - `operator`: the operator to use when applying the filter. Can be EQ, NE, GT, GE, LT, LE, IN, or CONTAINS.
   - `value`: the value to use when applying the filter.
-- `properties`: the properties to include in the report. Each property is a string with the name of the property. These will be sent as the Select element in the JSON body of the request.
+- `properties`: the properties to include in the report. Each property is a string with the name of the property. These will be sent as the Select element in the JSON body of the request. You can remove properties that you do not want returned in the report.
 
 ![JSON Structure](https://byteben.com/bb/Downloads/GitHub/Get-IntuneReport_JSONExample.png)  
 

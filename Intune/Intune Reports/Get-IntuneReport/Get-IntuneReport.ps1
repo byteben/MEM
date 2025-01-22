@@ -32,7 +32,9 @@ These JSON files can be updated to reflect the filters you want to apply to the 
   - "presence": Optional or Required. If Required, the filter must be present in the JSON with a value.
   - "operator": the operator to use when applying the filter. Can be EQ, NE, GT, GE, LT, LE, IN, or CONTAINS.
   - "value": the value to use when applying the filter.
-- "properties": the properties to include in the report. Each property is a string with the name of the property. These will be sent as the Select element in the JSON body of the request.
+- "properties": the properties to include in the report. Each property is a string with the name of the property. 
+These will be sent as the Select element in the JSON body of the request. the properties to include in the report. Each property is a string with the name of the property. 
+You can remove individual properties that you do not want returned in the report.
 
 .RESETTING JSON FILES
 To reset the JSON files to their default values and remove all previous reports, pass the -OverwriteRequestBodies switch.
