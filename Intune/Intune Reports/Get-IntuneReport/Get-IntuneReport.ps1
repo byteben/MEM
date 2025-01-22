@@ -638,6 +638,31 @@ $ReportCategories += [PSCustomObject]@{
         [PSCustomObject]@{ Name = 'OwnerType'; Presence = 'Optional'; Operator = 'eq'; Value = '' },
         [PSCustomObject]@{ Name = 'UserId'; Presence = 'Optional'; Operator = 'eq'; Value = '' }
     );
+    Properties    = @(
+        'AadDeviceId',
+        'ComplianceState',
+        'DeviceId',
+        'DeviceHealthThreatLevel',
+        'DeviceName',
+        'DeviceType',
+        'IntuneDeviceId',
+        'IMEI',
+        'InGracePeriodUntil',
+        'LastContact',
+        'ManagementAgents',
+        'OSDescription',
+        'OSVersion',
+        'OwnerType',
+        'OS',
+        'PrimaryUser',
+        'PartnerDeviceId',
+        'RetireAfterDatetime',
+        'SerialNumber',
+        'UserId',
+        'UPN',
+        'UserEmail',
+        'UserName'
+    );
     RequiredScope = 'DeviceManagementConfiguration.Read.All'
 }
 
@@ -938,6 +963,35 @@ $ReportCategories += [PSCustomObject]@{
         [PSCustomObject]@{ Name = 'NetworkInspectionSystemEnabled'; Presence = 'Optional'; Operator = 'eq'; Value = '' },
         [PSCustomObject]@{ Name = 'RealTimeProtectionEnabled'; Presence = 'Optional'; Operator = 'eq'; Value = '' },
         [PSCustomObject]@{ Name = 'SignatureUpdateOverdue'; Presence = 'Optional'; Operator = 'eq'; Value = '' }
+    );
+    Properties    = @(
+        'AntiMalwareVersion',
+        'CriticalFailure',
+        'DeviceId',
+        'DeviceName',
+        'DeviceState',
+        'EngineVersion',
+        'FullScanOverdue',
+        'FullScanRequired',
+        'LastFullScanDateTime',
+        'LastFullScanSignatureVersion',
+        'LastQuickScanDateTime',
+        'LastQuickScanSignatureVersion',
+        'LastReportedDateTime',
+        'MalwareProtectionEnabled',
+        'NetworkInspectionSystemEnabled',
+        'PendingFullScan',
+        'PendingManualSteps',
+        'PendingOfflineScan',
+        'PendingReboot',
+        'QuickScanOverdue',
+        'RealTimeProtectionEnabled',
+        'RebootRequired',
+        'SignatureUpdateOverdue',
+        'SignatureVersion',
+        'UPN',
+        'UserEmail',
+        'UserName'
     );
     RequiredScope = 'Reports.Read.All'
 }
