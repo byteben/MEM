@@ -55,7 +55,7 @@ The image below indicates the user is prompted for a filter value if it is requi
 
 ## 🔄 Resetting JSON Files
 
-To reset the JSON files to their default values and remove all previous reports, pass the `-OverwriteRequestBodies` switch.
+To reset the JSON files to their default values, pass the `-OverwriteRequestBodies` switch.
 
 ## 🗑️ Removing Older Reports
 
@@ -63,11 +63,17 @@ To remove older reports from the reports directory, pass the `-CleanupOldReports
 
 ## 🚀 Script Usage
 
-To use the `Get-IntuneReport` script, follow the examples below. These examples demonstrate how to run the script with various parameters and options.
+To use the `Get-IntuneReport` script, follow the examples below. These examples demonstrate how to run the script with various parameters and options.  
+By default, all properties are returned in the report. To customize the properties returned and the filters used in the request, edit the JSON files in the `$SavePath\Category_ReportName` directory.  
+
+### Quick Start Run 
+`Get-IntuneReport.ps1 -TenantId "your-tenant-id" -ClientId "your-client-id"` to connect interactively to the Microsoft Graph API and display an interactive menu to select reports you wish to request.  
 
 The example below indicates the host output when running the script and selecting reports 2 reports.  
 
 ![Example Host Output](https://byteben.com/bb/Downloads/GitHub/Get-IntuneReport_ExampleRun.png)
+
+
 
 ## ⏲️ Scheduled Task
 
