@@ -11,10 +11,10 @@ The Get-IntuneReport script allows you to generate and download reports from Mic
 
 ## 📋 Requirements
 
-- PowerShell 5.1 or later
-- Microsoft.Graph.Authentication module
-- Entra ID App Registration with appropriate permissions
-- Internet connectivity to access Microsoft Graph API
+- PowerShell 5.1 or later  
+- Microsoft.Graph.Authentication module  
+- Entra ID App Registration with appropriate permissions  
+- Internet connectivity to access Microsoft Graph API  
 
 ## 📖 Description
 
