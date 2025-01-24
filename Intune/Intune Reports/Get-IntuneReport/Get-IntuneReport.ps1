@@ -1469,6 +1469,21 @@ function Write-LogAndHost {
     }
 }
 
+# Function to extract ZIP files with PS 5.1 compatibility
+function Expand-ReportArchive {
+    param(
+        [string]$ZipFile,
+        [string]$DestinationPath
+    )
+
+    $filesBeforeExtraction = Get-ChildItem -Path $DestinationPath -Recurse -File
+    Expand-Archive -Path $ZipFile -DestinationPath $DestinationPath -Force
+    $filesAfterExtraction = Get-ChildItem -Path $DestinationPath -Recurse -File
+    $extractedFiles = Compare-Object -ReferenceObject $filesBeforeExtraction -DifferenceObject $filesAfterExtraction -PassThru | Where-Object { $_.SideIndicator -eq '=>' }
+
+    return $extractedFiles
+}
+
 # Set the save path globally
 $script:SavePath = $SavePath
 
@@ -1782,15 +1797,19 @@ foreach ($reportFile in $SelectedReports) {
                 $currentTime = Get-Date
                 $timeElapsed = ($currentTime - $startTime).TotalSeconds
                 $timeElapsedString = [TimeSpan]::FromSeconds($timeElapsed).ToString("hh\:mm\:ss")
-    
-                # Update host output every 1 second
-                Write-Host ("`rElapsedTime: {0}" -f $timeElapsedString) -NoNewline -ForegroundColor Yellow
-    
                 $progressPercent = [math]::Round(($attempts / $maxRetries) * 100, 0)
-                Write-Progress -Activity "Polling Report Status" -Status "Attempt $attempts of $maxRetries" -PercentComplete $progressPercent
-    
-                # Only check status every 6 seconds
-                if (($currentTime - $lastStatusCheckTime).TotalSeconds -ge 6) {
+
+                # Update host output based on PowerShell version
+                if ($PSVersionTable.PSVersion.Major -ge 7) {
+                    Write-Host ("`rElapsedTime: {0}" -f $timeElapsedString) -NoNewline -ForegroundColor Yellow
+                    Write-Progress -Activity "Polling Report Status" -Status "Attempt $attempts of $maxRetries" -PercentComplete $progressPercent
+                }
+                else {
+                    Write-Host ("`rElapsedTime: {0} - Polling Report Status - Attempt {1} of {2}" -f $timeElapsedString, $attempts, $maxRetries) -NoNewline -ForegroundColor Yellow
+                }
+                
+                # Only check status every few seconds, denoted by the value for $SecondsToWait
+                if (($currentTime - $lastStatusCheckTime).TotalSeconds -ge $SecondsToWait) {
                     $statusResponse = Invoke-MgGraphRequest -Uri $pollingUri -Method Get
                     $lastStatusCheckTime = $currentTime
 
@@ -1808,7 +1827,7 @@ foreach ($reportFile in $SelectedReports) {
                         try {
                             $extractPath = $reportFolder
                             Write-LogAndHost ("Extracting report {0} to {1}" -f $report.ReportName, $extractPath) -LogId $LogId -ForegroundColor Cyan
-                            $extractedFiles = Expand-Archive -Path $zipFilePath -DestinationPath $extractPath -Force -PassThru
+                            $extractedFiles = Expand-ReportArchive -ZipFile $zipFilePath -DestinationPath $reportFolder
                         }
                         catch {
                             Write-LogAndHost ("Error extracting report {0} to {1}: {2}" -f $report.ReportName, $extractPath, $_.Exception.Message) -LogId $LogId -Severity 3
@@ -1831,12 +1850,6 @@ foreach ($reportFile in $SelectedReports) {
                             Write-LogAndHost ("Renaming file {0} to {1}" -f $sourceFullPath, $targetFullPath) -LogId $LogId -ForegroundColor Cyan
 
                             try {
-
-                                # Ensure target directory exists
-                                $targetDir = [System.IO.Path]::GetDirectoryName($targetFullPath)
-                                if (-not (Test-Path -Path $targetDir)) {
-                                    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-                                }
         
                                 # Move-Item instead of Rename-Item for better cross-device support
                                 Move-Item -LiteralPath $sourceFullPath -Destination $targetFullPath -Force
@@ -1849,8 +1862,10 @@ foreach ($reportFile in $SelectedReports) {
                         }
 
                         # Delete the zip file
-                        Write-LogAndHost ("Deleting zip file {0}" -f $zipFilePath) -LogId $LogId -Severity 2
-                        Remove-Item -Path $zipFilePath
+                        if (Test-Path -Path $zipFilePath) {
+                            Write-LogAndHost ("Deleting zip file {0}" -f $zipFilePath) -LogId $LogId -Severity 2
+                            Remove-Item -Path $zipFilePath -ErrorAction SilentlyContinue
+                        }
                         break
                     }
                     $attempts++
