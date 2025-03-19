@@ -554,7 +554,8 @@ Process {
         Write-LogEntry -logEntry "Testing the WinGet package and other dependancies are installed" -logID $logID
 
         try {
-            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).InstallLocation | Sort-Object -Descending | Select-Object -First 1 -ErrorAction Stop
+            $winGetLatestVersion = ((Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName }).Version | ForEach-Object { [version]$_ } | Sort-Object -Descending | Select-Object -First 1 -ErrorAction Stop).ToString()
+            $winGetPath = (Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $winGetPackageName -and $_.Version -eq $winGetLatestVersion }).InstallLocation
         }
         catch {
             $testWinGetPathFail = $true
@@ -658,12 +659,12 @@ Process {
         )
         try {
             Write-Host "Checking if '$($winGetAppName)' is installed using Id '$($winGetAppId)'..."
-            Write-Host "winget.exe list --id $($winGetAppId) --source $($winGetAppSource) --accept-source-agreements"
+            Write-Host "winget.exe list --id $($winGetAppId) --source $($winGetAppSource) --scope machine --accept-source-agreements"
             Write-LogEntry -logEntry "Checking if '$($winGetAppName)' is installed using Id '$($winGetAppId)'..." -logID $logID
-            Write-LogEntry -logEntry "winget.exe list --id '$($winGetAppId)' --source $($winGetAppSource) --accept-source-agreements" -logID $logID 
+            Write-LogEntry -logEntry "winget.exe list --id '$($winGetAppId)' --source $($winGetAppSource) --scope machine --accept-source-agreements" -logID $logID 
 
             Set-Location $winGetPath
-            $winGetTest = & .\$winGetBinary list --id $winGetAppId --source $winGetAppSource --accept-source-agreements
+            $winGetTest = & .\$winGetBinary list --id $winGetAppId --source $winGetAppSource --scope machine --accept-source-agreements
                 
             foreach ($line in $winGetTest) {
                 
