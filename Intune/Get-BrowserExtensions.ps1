@@ -32,7 +32,7 @@ Filter results by browser type. Accepts "Edge", "Chrome", or "Firefox".
 Filter results by risk level. Accepts "Critical", "High", "Medium", "Low", or "Unknown".
 
 .PARAMETER ExcludeBuiltIn
-Exclude built-in extensions from results.
+Exclude built-in extensions from results. This is set to true by default.
 
 .PARAMETER IncludeBuiltInOnly
 Include only built-in extensions in results.
@@ -45,6 +45,9 @@ Path to export results as a CSV file.
 
 .PARAMETER Verbose
 Use -Verbose to display detailed troubleshooting output.
+
+.PARAMETER OutputFormat
+Format of the output display. Accepts "Table" or "List". Default is "Table".
 
 .EXAMPLE
     .\Get-BrowserExtensions.ps1 -Browser Chrome -RiskLevel High -ExcludeBuiltIn
@@ -64,7 +67,9 @@ param(
     [switch]$ExcludeBuiltIn,
     [switch]$IncludeBuiltInOnly,
     [string[]]$UserProfile,
-    [string]$ExportPath
+    [string]$ExportPath,
+    [ValidateSet("Table", "List")]
+    [string]$OutputFormat = "Table"
 )
 
 $browserPaths = @(
@@ -73,11 +78,16 @@ $browserPaths = @(
     @{ Pattern = "Roaming\Mozilla\Firefox\Profiles\*\extensions.json"; Browser = "Firefox"; Regex = $null }
 )
 
-$riskCategories = @{
+$apiRiskCategories = @{
     "Critical" = @("webRequest", "webRequestBlocking", "webRequestAuthProvider", "cookies", "nativeMessaging", "debugger", "scripting", "tabCapture", "management", "clipboardRead", "geolocation", "camera", "microphone", "desktopCapture")
     "High"     = @("history", "downloads", "devtools", "clipboardWrite", "contentSettings", "proxy", "webNavigation", "privacy", "tabs", "identity", "pageCapture")
     "Medium"   = @("bookmarks", "topSites", "storage", "notifications", "contextMenus", "offscreen", "activeTab", "webview")
     "Low"      = @("alarms", "background", "idle", "fontSettings", "printing", "favicon", "unlimitedStorage", "system.cpu", "system.memory", "system.network", "ttsEngine", "telemetry", "mozillaAddons", "systemPrivate")
+}
+
+$hostRiskCategories = @{
+    "Critical" = @("<all_urls>", "*://*/*", "file:///*", "*://*/", "https://*/*", "http://*/*", "*://*/*/*", "ftp://*/*")
+    "High"     = @("*://github.com/*", "*://gmail.com/*", "*://outlook.com/*", "*://docs.google.com/*", "*://drive.google.com/*", "*://*.google.com/*", "*://microsoft.com/*", "*://*.microsoft.com/*", "*://office.com/*", "*://*.office.com/*", "*://sharepoint.com/*", "*://*.sharepoint.com/*", "*://onedrive.com/*", "*://*.onedrive.com/*", "*://azure.com/*", "*://*.azure.com/*", "*://aws.amazon.com/*", "*://*.aws.amazon.com/*", "*://console.cloud.google.com/*", "*://banking.com/*", "*://*.bank/*", "*://paypal.com/*", "*://stripe.com/*", "*://slack.com/*", "*://teams.microsoft.com/*", "*://zoom.us/*")
 }
 
 $builtInExtensions = @{
@@ -117,12 +127,12 @@ $priority = [ordered]@{
 # Reverse lookup: API -> numeric risk
 $apiToRiskMap = @{}
 foreach ($risk in $priority.Keys) {
-    foreach ($api in $riskCategories[$risk]) {
+    foreach ($api in $apiRiskCategories[$risk]) {
         $apiToRiskMap[$api] = $priority[$risk]
     }
 }
 
-function Get-RiskLevel {
+function Get-APIRiskLevel {
     param($apis)
 
     if (-not $apis -or $apis.Count -eq 0) { return "Unknown" }
@@ -137,6 +147,27 @@ function Get-RiskLevel {
 
     return ($priority.Keys | Where-Object { $priority[$_] -eq $minScore })
 }
+
+function Get-HostRiskLevel {
+    param($hostPermissions)
+    if (-not $hostPermissions -or $hostPermissions.Count -eq 0) { return "Unknown" }
+
+    $bestScore = 5
+    foreach ($permission in $hostPermissions) {
+        foreach ($risk in @("High","Critical")) {  # High first
+            foreach ($pattern in $hostRiskCategories[$risk]) {
+                if ($permission -eq $pattern) {
+                    $score = $priority[$risk]
+                    if ($score -lt $bestScore) {
+                        $bestScore = $score
+                    }
+                }
+            }
+        }
+    }
+    return ($priority.Keys | Where-Object { $priority[$_] -eq $bestScore })
+}
+
 
 $results = @()
 
@@ -162,7 +193,12 @@ foreach ($entry in $browserPaths) {
 
                     # Firefox format
                     $extensions = $json.addons | Where-Object { $_.active -and $_.type -eq "extension" } | ForEach-Object {
-                        @{ ID = $_.id; Name = $_.defaultLocale.name; Version = $_.version; APIs = $_.userPermissions.permissions }
+                        @{ ID               = $_.id
+                            Name            = $_.defaultLocale.name
+                            Version         = $_.version
+                            APIs            = $_.userPermissions.permissions
+                            HostPermissions = $_.userPermissions.origins
+                        }
                     }
                 }
                 elseif ($json.extensions.settings) {
@@ -171,10 +207,15 @@ foreach ($entry in $browserPaths) {
                     $extensions = $json.extensions.settings.PSObject.Properties | Where-Object { -not $_.Value.state -or $_.Value.state -eq 1 } | ForEach-Object {
                         if ($_.Value.manifest) {
                             @{ 
-                                ID      = $_.Name
-                                Name    = $_.Value.manifest.browser_action.default_title ?? $_.Value.manifest.name
-                                Version = $_.Value.manifest.version
-                                APIs    = $_.Value.active_permissions.api
+                                ID              = $_.Name
+                                Name            = $_.Value.manifest.browser_action.default_title ?? $_.Value.manifest.name
+                                Version         = $_.Value.manifest.version
+                                APIs            = $_.Value.active_permissions.api
+                                HostPermissions = @(
+                                    $_.Value.active_permissions.explicit_host
+                                    $_.Value.active_permissions.scriptable_host
+                                    $_.Value.active_permissions.origins
+                                ) | Where-Object { $_ }
                             }
                         }
                     } | Where-Object { $_ }
@@ -183,18 +224,21 @@ foreach ($entry in $browserPaths) {
                 # Process extensions
                 $extensions | ForEach-Object {
                     $isOutOfBox = $builtInExtensions.ContainsKey($_.ID)
-                    $extensionRisk = Get-RiskLevel $_.APIs
+                    $apiRisk = Get-APIRiskLevel $_.APIs
+                    $hostRisk = Get-HostRiskLevel $_.HostPermissions
                 
                     $results += [PSCustomObject]@{
-                        Browser     = $entry.Browser
-                        ProfilePath = $profilePath  
-                        Profile     = $profileName
-                        ExtensionID = $_.ID
-                        Name        = $_.Name
-                        Version     = $_.Version
-                        OutOfBox    = $isOutOfBox
-                        Risk        = $extensionRisk
-                        APIs        = ($_.APIs -join ", ") ?? ""
+                        Browser         = $entry.Browser
+                        ProfilePath     = $profilePath  
+                        Profile         = $profileName
+                        ExtensionID     = $_.ID
+                        Name            = $_.Name
+                        Version         = $_.Version
+                        OutOfBox        = $isOutOfBox
+                        APIRisk         = $apiRisk
+                        HostRisk        = $hostRisk
+                        HostPermissions = ($_.HostPermissions -join ", ") ?? ""
+                        APIPermissions  = ($_.APIs -join ", ") ?? ""
                     }
                 }
             }
@@ -218,7 +262,7 @@ Write-Verbose "  UserProfile: $UserProfile"
 Write-Verbose "  Results before filtering: $($results.Count)"
 
 if ($Browser) { $results = $results | Where-Object { $_.Browser -in $Browser } }
-if ($RiskLevel) { $results = $results | Where-Object { $_.Risk -in $RiskLevel } }
+if ($RiskLevel) { $results = $results | Where-Object { $_.APIRisk -in $RiskLevel -or $_.HostRisk -in $RiskLevel } }
 if ($ExcludeBuiltIn) { $results = $results | Where-Object { -not $_.OutOfBox } }
 if ($IncludeBuiltInOnly) { $results = $results | Where-Object { $_.OutOfBox } }
 if ($UserProfile) { $results = $results | Where-Object { $_.ProfilePath -in $UserProfile } }
@@ -228,8 +272,28 @@ Write-Verbose "  Results after filtering: $($results.Count)"
 # Output
 if ($ExportPath) {
     $results | Export-Csv -Path $ExportPath -NoTypeInformation
-    Write-Host "Results exported to: $ExportPath" -ForegroundColor Green
 }
 else {
-    $results | Sort-Object Browser, ProfilePath, Profile, @{Expression={ $priority[$_.Risk] }; Ascending=$true} | Format-Table -AutoSize
+    $sorted = $results |
+    Sort-Object `
+    @{ Expression = { $priority[$_.HostRisk] } }, `
+    @{ Expression = { $priority[$_.APIRisk] } }, `
+    @{ Expression = { $_.Browser } }, `
+    @{ Expression = { $_.ProfilePath } }, `
+    @{ Expression = { $_.Profile } }
+
+    switch ($OutputFormat) {
+        "Table" {
+            $sorted |
+            Select-Object Browser, Profile, Name, Version, APIRisk, HostRisk,
+            @{ Name = 'HostPermissions'; Expression = { ($_.HostPermissions -join ', ') -replace '(.{80}).+', '$1...' } },
+            @{ Name = 'APIPermissions'; Expression = { ($_.APIPermissions -join ', ') -replace '(.{80}).+', '$1...' } } |
+            Format-Table -AutoSize
+        }
+        "List" {
+            $sorted |
+            Format-List Browser, ProfilePath, Profile, ExtensionID, Name, Version, OutOfBox,
+            APIRisk, HostRisk, HostPermissions, APIPermissions
+        }
+    }
 }
