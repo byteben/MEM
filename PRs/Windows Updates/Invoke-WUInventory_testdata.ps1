@@ -15,91 +15,110 @@
     Created:     2022-10-April
 
     Version history:
+    2.0 - (2026-04-01) Migrated to Logs Ingestion API (DCE/DCR) - HTTP Data Collector API deprecated Sept 2026
     1.0 - (2022-04-10) Original Release
 #>
+
 Param (
-    [Parameter(Mandatory = $true)]
-    [string]$testdatapath 
+    [string]$TestDataPath = "C:\GitHub\byteben\MEM\PRs\Windows Updates\testdata.csv",
+    [switch]$Interactive = $true
 )
 
 #region SCRIPTVARIABLES
 
-#Log Analytics Workspace ID
-$CustomerID = "13ef5887-f37c-432d-be47-17c3aa40fc55"
+$DCEEndpoint = ""
+$DCRImmutableID = ""
+$StreamName = "Custom-WUDevice_Settings2_CL_CL"
 
-#Log Analytics Workspace Primary Key
-$SharedKey = "+f9wKsv3BLWX1nlU/ywFQIShFeF8CUyPTECHE+Wc0LW3DwcONLU5UYpcXqIFn3/cGK2obsCPw9jvCebJJlEZCg=="
-
-#Custom Log Name
-$LogType = "WUDevice_Settings"
-
-# You can use an optional field to specify the timestamp from the data. If the time field is not specified, Azure Monitor assumes the time is the message ingestion time
-# DO NOT DELETE THIS VARIABLE. Recommened keep this blank. 
-$TimeStampField = ""
+#endregion
 
 #region Initialize
 
-# Enable TLS 1.2 support 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#endregion
 
 #region Functions
 
-# Function to create the authorization signature
-Function New-Signature ($customerID, $SharedKey, $Date, $ContentLength, $Method, $ContentType, $Resource) {
-    $xHeaders = "x-ms-date:" + $Date
-    $stringToHash = $Method + "`n" + $ContentLength + "`n" + $ContentType + "`n" + $xHeaders + "`n" + $Resource
-	
-    $bytesToHash = [Text.Encoding]::UTF8.GetBytes($stringToHash)
-    $keyBytes = [Convert]::FromBase64String($sharedKey)
-	
-    $sha256 = New-Object System.Security.Cryptography.HMACSHA256
-    $sha256.Key = $keyBytes
-    $calculatedHash = $sha256.ComputeHash($bytesToHash)
-    $encodedHash = [Convert]::ToBase64String($calculatedHash)
-    $authorization = 'SharedKey {0}:{1}' -f $customerId, $encodedHash
-    return $authorization
+Function Get-AuthToken {
+    if ($Interactive) {
+        Try {
+            Import-Module Az.Accounts -ErrorAction Stop
+        }
+        Catch {
+            throw "Az.Accounts module not found. Install it with: Install-Module Az -Scope CurrentUser"
+        }
+
+        if (-not (Get-AzContext)) {
+            Write-Output "No existing Az session found, prompting for interactive login..."
+            Connect-AzAccount
+        }
+        else {
+            Write-Output "Using existing Az session: $((Get-AzContext).Account)"
+        }
+
+        Try {
+            $TokenObj = Get-AzAccessToken -ResourceUrl "https://monitor.azure.com/"
+            $Token = [System.Net.NetworkCredential]::new("", $TokenObj.Token).Password
+            return $Token
+        }
+        Catch {
+            throw "Failed to obtain token via interactive login. Error: $($_.Exception.Message)"
+        }
+    }
+    else {
+        Try {
+            $TokenResponse = Invoke-RestMethod `
+                -Uri "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://monitor.azure.com/" `
+                -Headers @{ Metadata = "true" } `
+                -Method Get `
+                -ErrorAction Stop
+            return $TokenResponse.access_token
+        }
+        Catch {
+            throw "Failed to obtain Managed Identity token. Ensure the device has a Managed Identity and it has been granted Monitoring Metrics Publisher on the DCR. Error: $($_.Exception.Message)"
+        }
+    }
 }
 
-# Function to create and post the request
-Function Send-LogAnalyticsData($CustomerID, $SharedKey, $Body, $LogType) {
-    $Method = "POST"
-    $ContentType = "application/json"
-    $Resource = "/api/logs"
-    $rfc1123date = [DateTime]::UtcNow.ToString("r")
-    $ContentLength = $Body.Length
-    $signature = New-Signature `
-        -customerId $customerId `
-        -sharedKey $sharedKey `
-        -date $rfc1123date `
-        -ContentLength $ContentLength `
-        -Method $Method `
-        -ContentType $ContentType `
-        -Resource $Resource
-    $uri = "https://" + $CustomerID + ".ods.opinsights.azure.com" + $Resource + "?api-version=2016-04-01"
-	
-    #validate that payload data does not exceed limits
-    if ($Body.Length -gt (31.9 * 1024 * 1024)) {
-        throw ("Upload payload is too big and exceed the 32Mb limit for a single upload. Please reduce the payload size. Current payload size is: " + ($Body.Length / 1024 / 1024).ToString("#.#") + "Mb")
+Function Send-LogAnalyticsData {
+    param(
+        [byte[]]$Body,
+        [string]$Uri
+    )
+    
+    Write-Output "Entering Send-LogAnalyticsData..."
+    Write-Output "Posting to: $Uri"
+
+    $TokenObj = Get-AzAccessToken -ResourceUrl "https://monitor.azure.com/"
+    $Token = [System.Net.NetworkCredential]::new("", $TokenObj.Token).Password
+    Write-Output "Token obtained successfully"
+
+    $PayLoadSize = "Upload payload size is " + ($Body.Length / 1024).ToString("#.#") + "Kb"
+
+    Try {
+        $Response = Invoke-WebRequest `
+            -Uri $Uri `
+            -Method POST `
+            -ContentType "application/json" `
+            -Headers @{ Authorization = "Bearer $Token" } `
+            -Body $Body `
+            -UseBasicParsing `
+            -ErrorAction Stop
+
+        return "$($Response.StatusCode) : $PayLoadSize"
     }
-	
-    $PayLoadSize = ("Upload payload size is " + ($Body.Length / 1024).ToString("#.#") + "Kb ")
-	
-    $Headers = @{
-        "Authorization"        = $signature;
-        "Log-Type"             = $logType;
-        "x-ms-date"            = $rfc1123date;
-        "time-generated-field" = $TimeStampField;
+    Catch {
+        $ErrorBody = $_.ErrorDetails.Message
+        throw "HTTP $($_.Exception.Response.StatusCode) - $ErrorBody"
     }
-	
-    $Response = Invoke-WebRequest -Uri $uri -Method $Method -ContentType $ContentType -Headers $Headers -Body $Body -UseBasicParsing
-    $StatusMessage = "$($Response.StatusCode) : $($PayLoadSize)"
-    return "$StatusMessage"
 }
+
+#endregion
 
 #region Workspace
 
-#Import test data
-$csv = Import-Csv $testdatapath | Select-Object `
+$csv = Import-Csv $TestDataPath | Select-Object `
     ScriptVersion, `
     DeviceName, `
     ManagedDeviceID, `
@@ -154,31 +173,37 @@ $csv = Import-Csv $testdatapath | Select-Object `
     WUServer, `
     WUStatusServer
 
+$BatchSize = 100
+$Batches = [System.Collections.Generic.List[object]]::new()
+for ($i = 0; $i -lt $csv.Count; $i += $BatchSize) {
+    $Batches.Add($csv[$i..([Math]::Min($i + $BatchSize - 1, $csv.Count - 1))])
+}
 
-#Prepare Array for Upload
-$PayloadJson = $csv | ConvertTo-Json
+Write-Output "Total rows: $($csv.Count) | Batches: $($Batches.Count)"
 
-#Write upload intent to console
-Write-Output "Sending Payload:"
-Write-Output $PayloadJson
+$BatchNumber = 0
+$AllSucceeded = $true
+foreach ($Batch in $Batches) {
+    $BatchNumber++
+    $PayloadJson = $Batch | ConvertTo-Json
+    $Uri = "${DCEEndpoint}/dataCollectionRules/${DCRImmutableID}/streams/${StreamName}?api-version=2023-01-01"
 
-#Upload Data
-$ResponseWUInventory = Send-LogAnalyticsData -CustomerID $CustomerID -SharedKey $SharedKey -Body ([System.Text.Encoding]::UTF8.GetBytes($PayloadJson)) -LogType $LogType
-$ResponseWUInventory
-
-#Status Report
-$Date = Get-Date -Format "dd-MM HH:mm"
-$OutputMessage = "InventoryDate: $Date "
-
-if ($ResponseWUInventory) {
-    if ($ResponseWUInventory -like "200*") {
-        $OutputMessage = $OutputMessage + " WUInventory:OK"
+    Try {
+        $ResponseWUInventory = Send-LogAnalyticsData -Body ([System.Text.Encoding]::UTF8.GetBytes($PayloadJson)) -Uri $Uri
+        Write-Output "Batch $BatchNumber : $ResponseWUInventory"
     }
-    else {
-        $OutputMessage = $OutputMessage + " WUInventory:Fail"
+    Catch {
+        Write-Output "Batch $BatchNumber failed: $($_.Exception.Message)"
+        $AllSucceeded = $false
     }
 }
-Write-Output $OutputMessage
+
+$Date = Get-Date -Format "dd-MM HH:mm"
+if ($AllSucceeded) {
+    Write-Output "InventoryDate: $Date WUInventory:OK"
+}
+else {
+    Write-Output "InventoryDate: $Date WUInventory:Fail"
+}
 
 #endregion
-#>
