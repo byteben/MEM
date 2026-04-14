@@ -23,5 +23,5 @@ $results = foreach ($context in Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneMa
     }
 }
 
-$results | Sort-Object AgeDays -Descending | Format-Table -AutoSize
 "Total orphaned GRS entries: $($results.Count)"
+$results | Sort-Object AgeDays -Descending | Format-Table -AutoSize
